@@ -32,6 +32,8 @@ cautToRustType t =
   case S.typeDesc t of
     S.Record _ -> cautRecToRustStruct t
     S.Enumeration _ _ -> cautEnumToRustEnum t
+    S.Union _ _ -> cautUnionToRustEnum t
+    S.Synonym _ -> cautSynonymToRustNewtype t
     _ -> T.empty
 
 cautRecToRustStruct :: S.Type -> T.Text
@@ -53,3 +55,24 @@ pub enum $nm$ {
 |]
   where
     nm = specNameToRustName . specNameText $ t
+
+cautUnionToRustEnum :: S.Type -> T.Text
+cautUnionToRustEnum t = [str|
+$dd$
+pub enum $nm$ {
+    // fields
+}
+|]
+  where
+    nm = specNameToRustName . specNameText $ t
+
+cautSynonymToRustNewtype :: S.Type -> T.Text
+cautSynonymToRustNewtype t = [str|
+$dd$
+pub struct $nm$(type);
+|]
+  where
+    nm = specNameToRustName . specNameText $ t
+
+cautPrimToRustPrim :: C.Prim -> T.Text
+cautPrimToRustPrim = C.unIdentifier . C.primToText

@@ -15,4 +15,4 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.eventlog
-.stack-work/g
+.stack-work/
