@@ -1,25 +1,27 @@
-mod rust_test {
+pub mod rust_test {
     #[derive(Debug)]
     pub struct Unsigned8(u8);
 
     #[derive(Debug)]
     pub enum Someenum {
-        // fields
+        Red, // caut idx = 0
+        Green, // caut idx = 1
+        Blue, // caut idx = 2
     }
 
     #[derive(Debug)]
     pub enum Primitivetest {
-        u8(u8), // caut index = 0
-        u16(u16), // caut index = 1
-        u32(u32), // caut index = 2
-        u64(u64), // caut index = 3
-        s8(i8), // caut index = 4
-        s16(i16), // caut index = 5
-        s32(i32), // caut index = 6
-        s64(i64), // caut index = 7
-        bool(bool), // caut index = 8
-        f32(f32), // caut index = 9
-        f64(f64), // caut index = 10
+        U8(u8), // caut index = 0
+        U16(u16), // caut index = 1
+        U32(u32), // caut index = 2
+        U64(u64), // caut index = 3
+        S8(i8), // caut index = 4
+        S16(i16), // caut index = 5
+        S32(i32), // caut index = 6
+        S64(i64), // caut index = 7
+        Bool(bool), // caut index = 8
+        F32(f32), // caut index = 9
+        F64(f64), // caut index = 10
     }
 
     #[derive(Debug)]
@@ -33,7 +35,9 @@ mod rust_test {
 
     #[derive(Debug)]
     pub enum FieldEnum {
-        // fields
+        Somearray, // caut idx = 0
+        Somevector, // caut idx = 1
+        Arecord, // caut idx = 2
     }
 
     #[derive(Debug)]
@@ -60,10 +64,10 @@ mod rust_test {
 
     #[derive(Debug)]
     pub enum AUnion {
-        a(Arecord), // caut index = 0
-        b(Brecord), // caut index = 1
-        c(i8), // caut index = 2
-        d(Number64), // caut index = 3
-        e, // caut idx = 4
+        A(Arecord), // caut index = 0
+        B(Brecord), // caut index = 1
+        C(i8), // caut index = 2
+        D(Number64), // caut index = 3
+        E, // caut idx = 4
     }
 }

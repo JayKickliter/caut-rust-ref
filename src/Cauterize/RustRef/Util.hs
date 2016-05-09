@@ -4,6 +4,7 @@ module Cauterize.RustRef.Util
   (cautNameToRustName
   ,indent
   ,removeEmptyStrings
+  ,titleCase
   ) where
 
 
@@ -18,6 +19,8 @@ cautPrimToRustPrim i = case C.unIdentifier i of
   "s64" -> "i64"
   _ -> C.unIdentifier i
 
+titleCase :: T.Text -> T.Text
+titleCase t = T.concat $ map T.toTitle $ T.split (== '_') t
 
 isCautPrim :: C.Identifier -> Bool
 isCautPrim i = i `elem` C.allPrimNames
@@ -25,7 +28,7 @@ isCautPrim i = i `elem` C.allPrimNames
 cautNameToRustName :: C.Identifier -> T.Text
 cautNameToRustName i = if isCautPrim i
   then cautPrimToRustPrim i
-  else T.concat $ map T.toTitle $ T.split (== '_') (C.unIdentifier i)
+  else titleCase . C.unIdentifier $ i
 
 indent :: T.Text -> T.Text
 indent t = T.unlines $ T.append "    " <$> T.lines t

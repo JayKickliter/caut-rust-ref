@@ -18,7 +18,7 @@ dd = "#[derive(Debug)]"
 
 rustSrcFromSpec :: S.Specification -> T.Text
 rustSrcFromSpec s = [str|
-mod $modName$ {
+pub mod $modName$ {
 #rt in rustTypes:$rt$|$endline$#}
 |]
   where
@@ -32,7 +32,7 @@ cautToRustType t =
   case S.typeDesc t of
     S.Array{}       -> cautArrayToRustSlice t
     S.Combination{} -> T.empty
-    S.Enumeration{} -> cautEnumToRustEnum t
+    S.Enumeration{} -> cautEnumerationToRustEnum t
     S.Range{}       -> T.empty
     S.Record{}      -> cautRecToRustStruct t
     S.Synonym{}     -> cautSynonymToRustNewtype t
@@ -52,15 +52,16 @@ pub struct $nm$ {
     fields = cautFieldsToRustFields t
 
 
-cautEnumToRustEnum :: S.Type -> T.Text
-cautEnumToRustEnum t = [str|
+cautEnumerationToRustEnum :: S.Type -> T.Text
+cautEnumerationToRustEnum t = [str|
 $dd$
 pub enum $nm$ {
-    // fields
+#field in fields:    $field$|$endline$#
 }
 |]
   where
     nm = cautNameToRustName . S.typeName $ t
+    fields = cautFieldsToRustFields t
 
 
 cautArrayToRustSlice :: S.Type -> T.Text
@@ -129,19 +130,29 @@ cautFieldToRustEnumField :: S.Field -> T.Text
 cautFieldToRustEnumField (S.DataField n i r) =
   [str|$nm$($fieldType$), // caut index = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm = titleCase . C.unIdentifier $  n
     fieldType = cautNameToRustName r
     idx = T.pack . show $ i
 cautFieldToRustEnumField (S.EmptyField n i) =
   [str|$nm$, // caut idx = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm = titleCase . C.unIdentifier $ n
     idx = T.pack . show $ i
+
+
+cautEnumerationValToRustEnumField :: S.EnumVal -> T.Text
+cautEnumerationValToRustEnumField (S.EnumVal n i) =
+  [str|$nm$, // caut idx = $idx$|]
+  where
+    nm = titleCase . C.unIdentifier $ n
+    idx = T.pack . show $ i
+
 
 cautFieldsToRustFields :: S.Type -> [T.Text]
 cautFieldsToRustFields S.Type {S.typeDesc = td} =
   case td of
     S.Record fs      -> fmap cautFieldToRustRecordField fs
     S.Union  fs _    -> fmap cautFieldToRustEnumField fs
+    S.Enumeration  evs _    -> fmap cautEnumerationValToRustEnumField evs
     S.Combination {} -> error "Unimplemented"
     _                -> error "How did I get here?"
