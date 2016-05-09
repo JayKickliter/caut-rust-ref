@@ -11,11 +11,10 @@ import qualified Cauterize.Specification   as S
 import           Data.String.Interpolation
 import qualified Data.Text                 as T
 
-specNameText :: S.Type -> T.Text
-specNameText = C.unIdentifier . S.typeName
 
 dd :: T.Text
 dd = "#[derive(Debug)]"
+
 
 rustSrcFromSpec :: S.Specification -> T.Text
 rustSrcFromSpec s = [str|
@@ -27,24 +26,31 @@ mod $modName$ {
     cautTypes = S.specTypes s
     rustTypes = removeEmptyStrings $ fmap (indent . cautToRustType) cautTypes
 
+
 cautToRustType :: S.Type -> T.Text
 cautToRustType t =
   case S.typeDesc t of
-    S.Record _ -> cautRecToRustStruct t
-    S.Enumeration _ _ -> cautEnumToRustEnum t
-    S.Union _ _ -> cautUnionToRustEnum t
-    S.Synonym _ -> cautSynonymToRustNewtype t
-    _ -> T.empty
+    S.Array{}       -> cautArrayToRustSlice t
+    S.Combination{} -> T.empty
+    S.Enumeration{} -> cautEnumToRustEnum t
+    S.Range{}       -> T.empty
+    S.Record{}      -> cautRecToRustStruct t
+    S.Synonym{}     -> cautSynonymToRustNewtype t
+    S.Union{}       -> cautUnionToRustEnum t
+    S.Vector{}      -> cautVectorToRustVec t
+
 
 cautRecToRustStruct :: S.Type -> T.Text
 cautRecToRustStruct t = [str|
 $dd$
 pub struct $nm$ {
-    // fields
+#field in fields:    pub $field$|$endline$#
 }
 |]
   where
-    nm = specNameToRustName . specNameText $ t
+    nm = cautNameToRustName . S.typeName $ t
+    fields = cautFieldsToRustFields t
+
 
 cautEnumToRustEnum :: S.Type -> T.Text
 cautEnumToRustEnum t = [str|
@@ -54,25 +60,88 @@ pub enum $nm$ {
 }
 |]
   where
-    nm = specNameToRustName . specNameText $ t
+    nm = cautNameToRustName . S.typeName $ t
+
+
+cautArrayToRustSlice :: S.Type -> T.Text
+cautArrayToRustSlice t = [str|
+$dd$
+pub struct $nm$([$elType$; $sz$]);
+|]
+  where
+    nm = cautNameToRustName . S.typeName $ t
+    td = S.typeDesc t
+    et = S.arrayRef td
+    elType = cautNameToRustName et
+    sz = T.pack . show . S.arrayLength $  td
+
+
+cautVectorToRustVec :: S.Type -> T.Text
+cautVectorToRustVec t = [str|
+$dd$
+pub struct $nm$(Vec<$elType$>);
+|]
+  where
+    nm = cautNameToRustName . S.typeName $ t
+    td = S.typeDesc t
+    et = S.vectorRef td
+    elType = cautNameToRustName et
+
 
 cautUnionToRustEnum :: S.Type -> T.Text
 cautUnionToRustEnum t = [str|
 $dd$
 pub enum $nm$ {
-    // fields
+#field in fields:    $field$|$endline$#
 }
 |]
   where
-    nm = specNameToRustName . specNameText $ t
+    nm = cautNameToRustName . S.typeName $ t
+    fields = cautFieldsToRustFields t
 
 cautSynonymToRustNewtype :: S.Type -> T.Text
 cautSynonymToRustNewtype t = [str|
 $dd$
-pub struct $nm$(type);
+pub struct $nm$($st$);
 |]
   where
-    nm = specNameToRustName . specNameText $ t
+    nm = cautNameToRustName . S.typeName $ t
+    td = S.typeDesc t
+    sr = S.synonymRef td
+    st = cautNameToRustName sr
 
-cautPrimToRustPrim :: C.Prim -> T.Text
-cautPrimToRustPrim = C.unIdentifier . C.primToText
+
+cautFieldToRustRecordField :: S.Field -> T.Text
+cautFieldToRustRecordField (S.DataField n i r) =
+  [str|$nm$: $fieldType$, // caut index = $idx$|]
+  where
+    nm = C.unIdentifier n
+    fieldType = cautNameToRustName r
+    idx = T.pack . show $ i
+cautFieldToRustRecordField (S.EmptyField n i) =
+  [str|$nm$, // caut idx = $idx$|]
+  where
+    nm = C.unIdentifier n
+    idx = T.pack . show $ i
+
+
+cautFieldToRustEnumField :: S.Field -> T.Text
+cautFieldToRustEnumField (S.DataField n i r) =
+  [str|$nm$($fieldType$), // caut index = $idx$|]
+  where
+    nm = C.unIdentifier n
+    fieldType = cautNameToRustName r
+    idx = T.pack . show $ i
+cautFieldToRustEnumField (S.EmptyField n i) =
+  [str|$nm$, // caut idx = $idx$|]
+  where
+    nm = C.unIdentifier n
+    idx = T.pack . show $ i
+
+cautFieldsToRustFields :: S.Type -> [T.Text]
+cautFieldsToRustFields S.Type {S.typeDesc = td} =
+  case td of
+    S.Record fs      -> fmap cautFieldToRustRecordField fs
+    S.Union  fs _    -> fmap cautFieldToRustEnumField fs
+    S.Combination {} -> error "Unimplemented"
+    _                -> error "How did I get here?"
