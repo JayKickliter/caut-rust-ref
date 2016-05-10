@@ -31,13 +31,34 @@ cautToRustType :: S.Type -> T.Text
 cautToRustType t =
   case S.typeDesc t of
     S.Array{}       -> cautArrayToRustSlice t
-    S.Combination{} -> T.empty
+    S.Combination{} -> cautComboToRustStruct t
     S.Enumeration{} -> cautEnumerationToRustEnum t
-    S.Range{}       -> T.empty
+    S.Range{}       -> cautRangeToRust t
     S.Record{}      -> cautRecToRustStruct t
     S.Synonym{}     -> cautSynonymToRustNewtype t
     S.Union{}       -> cautUnionToRustEnum t
     S.Vector{}      -> cautVectorToRustVec t
+
+
+cautRangeToRust :: S.Type -> T.Text
+cautRangeToRust t = [str|
+// Not declaring range $nm$.
+// Range type not yet implemented.
+|]
+  where
+    nm = cautNameToRustName . S.typeName $ t
+
+
+cautComboToRustStruct :: S.Type -> T.Text
+cautComboToRustStruct t = [str|
+$dd$
+pub struct $nm$ {
+#field in fields:    pub $field$|$endline$#
+}
+|]
+  where
+    nm = cautNameToRustName . S.typeName $ t
+    fields = cautFieldsToRustFields t
 
 
 cautRecToRustStruct :: S.Type -> T.Text
@@ -140,6 +161,20 @@ cautFieldToRustEnumField (S.EmptyField n i) =
     idx = T.pack . show $ i
 
 
+cautComboFieldToRustStructField :: S.Field -> T.Text
+cautComboFieldToRustStructField (S.DataField n i r) =
+  [str|$nm$: Option($fieldType$), // caut index = $idx$|]
+  where
+    nm = C.unIdentifier n
+    fieldType = cautNameToRustName r
+    idx = T.pack . show $ i
+cautComboFieldToRustStructField (S.EmptyField n i) =
+  [str|$nm$: Option<()>, // caut idx = $idx$|]
+  where
+    nm = C.unIdentifier n
+    idx = T.pack . show $ i
+
+
 cautEnumerationValToRustEnumField :: S.EnumVal -> T.Text
 cautEnumerationValToRustEnumField (S.EnumVal n i) =
   [str|$nm$, // caut idx = $idx$|]
@@ -154,5 +189,5 @@ cautFieldsToRustFields S.Type {S.typeDesc = td} =
     S.Record fs      -> fmap cautFieldToRustRecordField fs
     S.Union  fs _    -> fmap cautFieldToRustEnumField fs
     S.Enumeration  evs _    -> fmap cautEnumerationValToRustEnumField evs
-    S.Combination {} -> error "Unimplemented"
+    S.Combination fs _ -> fmap cautComboFieldToRustStructField fs
     _                -> error "How did I get here?"

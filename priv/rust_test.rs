@@ -2,15 +2,11 @@ pub mod rust_test {
     #[derive(Debug)]
     pub struct Unsigned8(u8);
 
-    #[derive(Debug)]
-    pub enum Someenum {
-        Red, // caut idx = 0
-        Green, // caut idx = 1
-        Blue, // caut idx = 2
-    }
+    // Not declaring range SomeRange.
+    // Range type not yet implemented.
 
     #[derive(Debug)]
-    pub enum Primitivetest {
+    pub enum PrimitiveTest {
         U8(u8), // caut index = 0
         U16(u16), // caut index = 1
         U32(u32), // caut index = 2
@@ -28,10 +24,10 @@ pub mod rust_test {
     pub struct Number64(i64);
 
     #[derive(Debug)]
-    pub struct Somearray([Number64; 8]);
+    pub struct SomeArray([Number64; 8]);
 
     #[derive(Debug)]
-    pub struct Somevector(Vec<Number64>);
+    pub struct SomeVector(Vec<Number64>);
 
     #[derive(Debug)]
     pub enum FieldEnum {
@@ -44,30 +40,45 @@ pub mod rust_test {
     pub struct Header(Vec<FieldEnum>);
 
     #[derive(Debug)]
-    pub struct Crecord {
+    pub enum Color {
+        Red, // caut idx = 0
+        Green, // caut idx = 1
+        Blue, // caut idx = 2
+    }
+
+    #[derive(Debug)]
+    pub struct CRecord {
         pub a: i8, // caut index = 0
         pub b: i8, // caut index = 1
     }
 
     #[derive(Debug)]
-    pub struct Brecord {
+    pub struct BRecord {
         pub a: i8, // caut index = 0
-        pub d: Crecord, // caut index = 1
+        pub d: CRecord, // caut index = 1
     }
 
     #[derive(Debug)]
-    pub struct Arecord {
-        pub z: Somevector, // caut index = 0
+    pub struct ARecord {
+        pub z: SomeVector, // caut index = 0
         pub a: i8, // caut index = 1
-        pub d: Brecord, // caut index = 2
+        pub d: BRecord, // caut index = 2
     }
 
     #[derive(Debug)]
     pub enum AUnion {
-        A(Arecord), // caut index = 0
-        B(Brecord), // caut index = 1
+        A(ARecord), // caut index = 0
+        B(BRecord), // caut index = 1
         C(i8), // caut index = 2
         D(Number64), // caut index = 3
         E, // caut idx = 4
+    }
+
+    #[derive(Debug)]
+    pub struct ACombination {
+        pub a: Option(Number64), // caut index = 0
+        pub b: Option(i8), // caut index = 1
+        pub c: Option(AUnion), // caut index = 2
+        pub d: Option<()>, // caut idx = 3
     }
 }

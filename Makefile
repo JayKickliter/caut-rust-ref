@@ -1,4 +1,10 @@
-.phony: all generate
+.phony: executable generate
 
-generate:
+priv/rust_test.spec: priv/rust_test.scm
+	stack exec cauterize -- --schema priv/rust_test.scm --specification priv/rust_test.spec
+
+executable:
+	stack build caut-rust-ref
+
+generate: priv/rust_test.spec executable
 	stack exec caut-rust-ref -- -s priv/rust_test.spec -o priv

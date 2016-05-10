@@ -1,41 +1,41 @@
 (name "rust_test")
 (version "0.0.1")
-(type number64 synonym s64)
-(type unsigned8 synonym u8)
-(type somearray array number64 8)
-(type somevector vector number64 8)
-(type arecord record
+(type number_64 synonym s64)
+(type unsigned_8 synonym u8)
+(type some_array array number_64 8)
+(type some_vector vector number_64 8)
+(type a_record record
         (fields
-          (field z somevector)
+          (field z some_vector)
           (field a s8)
-          (field d brecord)))
-(type brecord record
+          (field d b_record)))
+(type b_record record
         (fields
           (field a s8)
-          (field d crecord)))
-(type crecord record
+          (field d c_record)))
+(type c_record record
         (fields
           (field a s8)
           (field b s8)))
 (type a_union union
        (fields
-         (field a arecord)
-         (field b brecord)
+         (field a a_record)
+         (field b b_record)
          (field c s8)
-         (field d number64)
+         (field d number_64)
          (empty e)))
 (type a_combination combination
              (fields
-               (field a number64)
+               (field a number_64)
                (field b s8)
                (field c a_union)
                (empty d)))
-(type someenum enumeration
+(type color enumeration
       (values
         red
         green
         blue))
-(type primitivetest union
+(type primitive_test union
       (fields
         (field u8 u8)
         (field u16 u16)

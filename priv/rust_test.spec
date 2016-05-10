@@ -1,25 +1,17 @@
 (name "rust_test")
 (version "0.0.1")
-(fingerprint b15148cfc83944643b74f9684450e8d57a3da95b)
+(fingerprint 5d8ec901583542aab61ae3e1d2e0a1e6c5c0055c)
 (size 1 80)
 (depth 6)
 (typelength 2)
 (lengthtag t1)
 (type 
-  unsigned8
+  unsigned_8
   synonym
-  (fingerprint e3e070dd78628d7aae3047878ccd6993423bb5bf)
+  (fingerprint 50f43a037b64020378c7e6f2aeb3c2854e4cdf99)
   (size 1 1)
   (depth 2)
   u8)
-(type 
-  someenum
-  enumeration
-  (fingerprint e40274f6c896c769fa274bdfb53e6374428eb905)
-  (size 1 1)
-  (depth 1)
-  t1
-  (values (value red 0) (value green 1) (value blue 2)))
 (type 
   some_range
   range
@@ -31,9 +23,9 @@
   t1
   u16)
 (type 
-  primitivetest
+  primitive_test
   union
-  (fingerprint 86837a082cb7501791d1ff52f200a2127ffce010)
+  (fingerprint 8e6c1c207920c0611417be800c91f231eac5b4f1)
   (size 2 9)
   (depth 2)
   t1
@@ -50,27 +42,27 @@
     (field f32 9 f32)
     (field f64 10 f64)))
 (type 
-  number64
+  number_64
   synonym
-  (fingerprint a3db7c02b1f69e0897c4aeda37b2f5bc9b6aaa45)
+  (fingerprint 1ca3f917f77b9d142b34478f4c9cfb047d9f6370)
   (size 8 8)
   (depth 2)
   s64)
 (type 
-  somearray
+  some_array
   array
-  (fingerprint 1a9a2bf194ebd8e5287225bcbbabb4f592800ee5)
+  (fingerprint 5f44b93b749f2f6008204715a912fece747833fe)
   (size 64 64)
   (depth 3)
-  number64
+  number_64
   8)
 (type 
-  somevector
+  some_vector
   vector
-  (fingerprint 39b9e121f4c0d497424d602dbb955a29b0a6e1e3)
+  (fingerprint 98da3c69e1297e1d2156c0cbaff8a2d2e0bd68b4)
   (size 1 65)
   (depth 3)
-  number64
+  number_64
   8
   t1)
 (type 
@@ -91,44 +83,52 @@
   4
   t1)
 (type 
-  crecord
+  color
+  enumeration
+  (fingerprint f95edde4f1cbdd7471ed42a4b70ca4f188523738)
+  (size 1 1)
+  (depth 1)
+  t1
+  (values (value red 0) (value green 1) (value blue 2)))
+(type 
+  c_record
   record
-  (fingerprint bfd1b7a978b8202e3b73c600d6e3fb2da6fec5ad)
+  (fingerprint 550501afb46b1b5006307dc9c66318859354e133)
   (size 2 2)
   (depth 2)
   (fields (field a 0 s8) (field b 1 s8)))
 (type 
-  brecord
+  b_record
   record
-  (fingerprint 16a32de194b2eb3cc2167cc5ff96738c61d1eeda)
+  (fingerprint d21c39a58245920cc9198d4c7907eff2e81e5118)
   (size 3 3)
   (depth 3)
-  (fields (field a 0 s8) (field d 1 crecord)))
+  (fields (field a 0 s8) (field d 1 c_record)))
 (type 
-  arecord
+  a_record
   record
-  (fingerprint 9975e8a7ba429c1cd49ea366575b7c6c3e863cd8)
+  (fingerprint 252a6129ec8e4991df74a327bdc3fce7d7c46d73)
   (size 5 69)
   (depth 4)
-  (fields (field z 0 somevector) (field a 1 s8) (field d 2 brecord)))
+  (fields (field z 0 some_vector) (field a 1 s8) (field d 2 b_record)))
 (type 
   a_union
   union
-  (fingerprint d02d91ba842586a4e53f52892a4cd9a8794f1a00)
+  (fingerprint 0133189c038da7b1629d15e15daa221dd84f9900)
   (size 1 70)
   (depth 5)
   t1
   (fields 
-    (field a 0 arecord)
-    (field b 1 brecord)
+    (field a 0 a_record)
+    (field b 1 b_record)
     (field c 2 s8)
-    (field d 3 number64)
+    (field d 3 number_64)
     (empty e 4)))
 (type 
   a_combination
   combination
-  (fingerprint 71f00aeba696a2d73e26bcfdd6ebd9dac3a6cfba)
+  (fingerprint 94ab0e4b372e96edcdeb9c5f82b4887d65535322)
   (size 1 80)
   (depth 6)
   t1
-  (fields (field a 0 number64) (field b 1 s8) (field c 2 a_union) (empty d 3)))
+  (fields (field a 0 number_64) (field b 1 s8) (field c 2 a_union) (empty d 3)))
