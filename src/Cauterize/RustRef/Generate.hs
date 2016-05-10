@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes       #-}
 
 module Cauterize.RustRef.Generate
-       (rustSrcFromSpec
+       (spec2rust
        ) where
 
 import qualified Cauterize.CommonTypes     as C
@@ -16,32 +16,32 @@ dd :: T.Text
 dd = "#[derive(Debug)]"
 
 
-rustSrcFromSpec :: S.Specification -> T.Text
-rustSrcFromSpec s = [str|
+spec2rust :: S.Specification -> T.Text
+spec2rust s = [str|
 pub mod $modName$ {
 #rt in rustTypes:$rt$|$endline$#}
 |]
   where
-    modName = S.specName s
+    modName   = S.specName s
     cautTypes = S.specTypes s
-    rustTypes = removeEmptyStrings $ fmap (indent . cautToRustType) cautTypes
+    rustTypes = nonEmpty $ fmap (indent . cautToRustType) cautTypes
 
 
 cautToRustType :: S.Type -> T.Text
 cautToRustType t =
   case S.typeDesc t of
-    S.Array{}       -> cautArrayToRustSlice t
-    S.Combination{} -> cautComboToRustStruct t
-    S.Enumeration{} -> cautEnumerationToRustEnum t
-    S.Range{}       -> cautRangeToRust t
-    S.Record{}      -> cautRecToRustStruct t
-    S.Synonym{}     -> cautSynonymToRustNewtype t
-    S.Union{}       -> cautUnionToRustEnum t
-    S.Vector{}      -> cautVectorToRustVec t
+    S.Array{}       -> array2slice t
+    S.Combination{} -> combination2struct t
+    S.Enumeration{} -> enumeration2enum t
+    S.Range{}       -> range2unimplemented t
+    S.Record{}      -> record2struct t
+    S.Synonym{}     -> synonym2newtype t
+    S.Union{}       -> union2enum t
+    S.Vector{}      -> vector2vec t
 
 
-cautRangeToRust :: S.Type -> T.Text
-cautRangeToRust t = [str|
+range2unimplemented :: S.Type -> T.Text
+range2unimplemented t = [str|
 // Not declaring range $nm$.
 // Range type not yet implemented.
 |]
@@ -49,80 +49,80 @@ cautRangeToRust t = [str|
     nm = cautNameToRustName . S.typeName $ t
 
 
-cautComboToRustStruct :: S.Type -> T.Text
-cautComboToRustStruct t = [str|
+combination2struct :: S.Type -> T.Text
+combination2struct t = [str|
 $dd$
 pub struct $nm$ {
 #field in fields:    pub $field$|$endline$#
 }
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
+    nm     = cautNameToRustName . S.typeName $ t
     fields = cautFieldsToRustFields t
 
 
-cautRecToRustStruct :: S.Type -> T.Text
-cautRecToRustStruct t = [str|
+record2struct :: S.Type -> T.Text
+record2struct t = [str|
 $dd$
 pub struct $nm$ {
 #field in fields:    pub $field$|$endline$#
 }
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
+    nm     = cautNameToRustName . S.typeName $ t
     fields = cautFieldsToRustFields t
 
 
-cautEnumerationToRustEnum :: S.Type -> T.Text
-cautEnumerationToRustEnum t = [str|
+enumeration2enum :: S.Type -> T.Text
+enumeration2enum t = [str|
 $dd$
 pub enum $nm$ {
 #field in fields:    $field$|$endline$#
 }
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
+    nm     = cautNameToRustName . S.typeName $ t
     fields = cautFieldsToRustFields t
 
 
-cautArrayToRustSlice :: S.Type -> T.Text
-cautArrayToRustSlice t = [str|
+array2slice :: S.Type -> T.Text
+array2slice t = [str|
 $dd$
 pub struct $nm$([$elType$; $sz$]);
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
-    td = S.typeDesc t
-    et = S.arrayRef td
+    nm     = cautNameToRustName . S.typeName $ t
+    td     = S.typeDesc t
+    et     = S.arrayRef td
     elType = cautNameToRustName et
-    sz = T.pack . show . S.arrayLength $  td
+    sz     = T.pack . show . S.arrayLength $  td
 
 
-cautVectorToRustVec :: S.Type -> T.Text
-cautVectorToRustVec t = [str|
+vector2vec :: S.Type -> T.Text
+vector2vec t = [str|
 $dd$
 pub struct $nm$(Vec<$elType$>);
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
-    td = S.typeDesc t
-    et = S.vectorRef td
+    nm     = cautNameToRustName . S.typeName $ t
+    td     = S.typeDesc t
+    et     = S.vectorRef td
     elType = cautNameToRustName et
 
 
-cautUnionToRustEnum :: S.Type -> T.Text
-cautUnionToRustEnum t = [str|
+union2enum :: S.Type -> T.Text
+union2enum t = [str|
 $dd$
 pub enum $nm$ {
 #field in fields:    $field$|$endline$#
 }
 |]
   where
-    nm = cautNameToRustName . S.typeName $ t
+    nm     = cautNameToRustName . S.typeName $ t
     fields = cautFieldsToRustFields t
 
-cautSynonymToRustNewtype :: S.Type -> T.Text
-cautSynonymToRustNewtype t = [str|
+synonym2newtype :: S.Type -> T.Text
+synonym2newtype t = [str|
 $dd$
 pub struct $nm$($st$);
 |]
@@ -133,61 +133,61 @@ pub struct $nm$($st$);
     st = cautNameToRustName sr
 
 
-cautFieldToRustRecordField :: S.Field -> T.Text
-cautFieldToRustRecordField (S.DataField n i r) =
+fiedl2structField :: S.Field -> T.Text
+fiedl2structField (S.DataField n i r) =
   [str|$nm$: $fieldType$, // caut index = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm        = C.unIdentifier n
     fieldType = cautNameToRustName r
-    idx = T.pack . show $ i
-cautFieldToRustRecordField (S.EmptyField n i) =
+    idx       = T.pack . show $ i
+fiedl2structField (S.EmptyField n i) =
   [str|$nm$, // caut idx = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm  = C.unIdentifier n
     idx = T.pack . show $ i
 
 
-cautFieldToRustEnumField :: S.Field -> T.Text
-cautFieldToRustEnumField (S.DataField n i r) =
+field2enumField :: S.Field -> T.Text
+field2enumField (S.DataField n i r) =
   [str|$nm$($fieldType$), // caut index = $idx$|]
   where
-    nm = titleCase . C.unIdentifier $  n
+    nm        = titleCase . C.unIdentifier $  n
     fieldType = cautNameToRustName r
-    idx = T.pack . show $ i
-cautFieldToRustEnumField (S.EmptyField n i) =
+    idx       = T.pack . show $ i
+field2enumField (S.EmptyField n i) =
   [str|$nm$, // caut idx = $idx$|]
   where
-    nm = titleCase . C.unIdentifier $ n
+    nm  = titleCase . C.unIdentifier $ n
     idx = T.pack . show $ i
 
 
-cautComboFieldToRustStructField :: S.Field -> T.Text
-cautComboFieldToRustStructField (S.DataField n i r) =
+comboField2structField :: S.Field -> T.Text
+comboField2structField (S.DataField n i r) =
   [str|$nm$: Option<$fieldType$>, // caut index = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm        = C.unIdentifier n
     fieldType = cautNameToRustName r
-    idx = T.pack . show $ i
-cautComboFieldToRustStructField (S.EmptyField n i) =
+    idx       = T.pack . show $ i
+comboField2structField (S.EmptyField n i) =
   [str|$nm$: Option<()>, // caut idx = $idx$|]
   where
-    nm = C.unIdentifier n
+    nm  = C.unIdentifier n
     idx = T.pack . show $ i
 
 
-cautEnumerationValToRustEnumField :: S.EnumVal -> T.Text
-cautEnumerationValToRustEnumField (S.EnumVal n i) =
+enumVal2enumField :: S.EnumVal -> T.Text
+enumVal2enumField (S.EnumVal n i) =
   [str|$nm$, // caut idx = $idx$|]
   where
-    nm = titleCase . C.unIdentifier $ n
+    nm  = titleCase . C.unIdentifier $ n
     idx = T.pack . show $ i
 
 
 cautFieldsToRustFields :: S.Type -> [T.Text]
 cautFieldsToRustFields S.Type {S.typeDesc = td} =
   case td of
-    S.Record fs      -> fmap cautFieldToRustRecordField fs
-    S.Union  fs _    -> fmap cautFieldToRustEnumField fs
-    S.Enumeration  evs _    -> fmap cautEnumerationValToRustEnumField evs
-    S.Combination fs _ -> fmap cautComboFieldToRustStructField fs
-    _                -> error "How did I get here?"
+    S.Record fs          -> fmap fiedl2structField fs
+    S.Union  fs _        -> fmap field2enumField fs
+    S.Enumeration  evs _ -> fmap enumVal2enumField evs
+    S.Combination fs _   -> fmap comboField2structField fs
+    _                    -> error "How did I get here?"

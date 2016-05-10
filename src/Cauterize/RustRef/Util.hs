@@ -3,7 +3,7 @@
 module Cauterize.RustRef.Util
   (cautNameToRustName
   ,indent
-  ,removeEmptyStrings
+  ,nonEmpty
   ,titleCase
   ) where
 
@@ -33,5 +33,5 @@ cautNameToRustName i = if isCautPrim i
 indent :: T.Text -> T.Text
 indent t = T.unlines $ T.append "    " <$> T.lines t
 
-removeEmptyStrings :: [T.Text] -> [T.Text]
-removeEmptyStrings = filter (not . (T.empty ==))
+nonEmpty :: [T.Text] -> [T.Text]
+nonEmpty = filter (not . (T.empty ==))
