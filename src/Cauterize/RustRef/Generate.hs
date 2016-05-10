@@ -163,7 +163,7 @@ cautFieldToRustEnumField (S.EmptyField n i) =
 
 cautComboFieldToRustStructField :: S.Field -> T.Text
 cautComboFieldToRustStructField (S.DataField n i r) =
-  [str|$nm$: Option($fieldType$), // caut index = $idx$|]
+  [str|$nm$: Option<$fieldType$>, // caut index = $idx$|]
   where
     nm = C.unIdentifier n
     fieldType = cautNameToRustName r

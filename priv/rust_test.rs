@@ -76,9 +76,9 @@ pub mod rust_test {
 
     #[derive(Debug)]
     pub struct ACombination {
-        pub a: Option(Number64), // caut index = 0
-        pub b: Option(i8), // caut index = 1
-        pub c: Option(AUnion), // caut index = 2
+        pub a: Option<Number64>, // caut index = 0
+        pub b: Option<i8>, // caut index = 1
+        pub c: Option<AUnion>, // caut index = 2
         pub d: Option<()>, // caut idx = 3
     }
 }
