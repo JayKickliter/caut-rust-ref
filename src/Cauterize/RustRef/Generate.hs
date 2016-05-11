@@ -19,7 +19,7 @@ dd = "#[derive(Debug)]"
 spec2rust :: S.Specification -> T.Text
 spec2rust s = [str|
 pub mod $modName$ {
-#rt in rustTypes:$rt$|$endline$#}
+#rt in rustTypes:$rt$|$endline$#}$endline$
 |]
   where
     modName   = S.specName s
