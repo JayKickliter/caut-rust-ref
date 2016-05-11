@@ -20,7 +20,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , cauterize >= 0.1.0.0
                      , text
-                     , Interpolation
+                     , wl-pprint
   default-language:    Haskell2010
 
 executable caut-rust-ref

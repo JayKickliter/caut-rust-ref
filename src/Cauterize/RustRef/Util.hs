@@ -2,7 +2,6 @@
 
 module Cauterize.RustRef.Util
   (cautNameToRustName
-  ,indent
   ,nonEmpty
   ,titleCase
   ) where
@@ -25,13 +24,10 @@ titleCase t = T.concat $ map T.toTitle $ T.split (== '_') t
 isCautPrim :: C.Identifier -> Bool
 isCautPrim i = i `elem` C.allPrimNames
 
-cautNameToRustName :: C.Identifier -> T.Text
+cautNameToRustName :: C.Identifier -> String
 cautNameToRustName i = if isCautPrim i
-  then cautPrimToRustPrim i
-  else titleCase . C.unIdentifier $ i
-
-indent :: T.Text -> T.Text
-indent t = T.unlines $ T.append "    " <$> T.lines t
+  then T.unpack . cautPrimToRustPrim $ i
+  else T.unpack . titleCase . C.unIdentifier $ i
 
 nonEmpty :: [T.Text] -> [T.Text]
 nonEmpty = filter (not . (T.empty ==))
