@@ -27,8 +27,9 @@ spec2rust = T.pack . source
 source :: S.Specification -> String
 source spec = renderDoc $ vcat $ punctuate empty
   [ s "pub mod" <+> specName <+> lbrace
-  , indent 4 $ vcat [ dd <> linebreak <> rustType tp <> linebreak
-                    | tp <- S.specTypes spec ]
+  , vcat [ indent 4 (dd <> linebreak <> rustType tp) <> linebreak
+         | tp <-  S.specTypes spec
+         ]
   , rbrace
   , empty
   ]
