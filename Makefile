@@ -8,3 +8,9 @@ executable:
 
 generate: priv/rust_test.spec executable
 	stack exec caut-rust-ref -- -s priv/rust_test.spec -o priv
+
+rustlib-build:
+	cargo build --manifest-path rust/cauterize/Cargo.toml
+
+rustlib-test:
+	cargo test --manifest-path rust/cauterize/Cargo.toml
