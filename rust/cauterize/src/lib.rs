@@ -42,9 +42,9 @@ pub trait Cauterize: 'static + Sized {
 
 
 impl Cauterize for u8 {
-    fn decode(dec: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
         let buf: &mut [u8] = &mut [0];
-        match dec.csr.read(buf) {
+        match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0]),
             Result::Err(_) => Result::Err(CautResult::TakeError),
         }
@@ -62,9 +62,9 @@ impl Cauterize for u8 {
 }
 
 impl Cauterize for i8 {
-    fn decode(dec: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
         let buf: &mut [u8] = &mut [0];
-        match dec.csr.read(buf) {
+        match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0] as i8),
             Result::Err(_) => Result::Err(CautResult::TakeError),
         }
@@ -240,18 +240,28 @@ fn it_works() {
     enc_f64.encode(&mut ectx).unwrap();
 
     // Get the enc buffer back and resuse it for decoding
-    // let buf = ectx.consume();
-    // let mut dctx = Decoder::new(buf);
+    let buf = ectx.consume();
+    let mut dctx = Decoder::new(buf);
 
-    // let enc_u8: u8 = decode(&mut dctx).unwrap();
-    // let enc_i8: i8 = decode(&mut dctx).unwrap();
-    // let enc_u16: u16 = decode(&mut dctx).unwrap();
-    // let enc_i16: i16 = decode(&mut dctx).unwrap();
-    // let enc_u32: u32 = decode(&mut dctx).unwrap();
-    // let enc_i32: i32 = decode(&mut dctx).unwrap();
-    // let enc_u64: u64 = decode(&mut dctx).unwrap();
-    // let enc_i64: i64 = decode(&mut dctx).unwrap();
-    // let enc_f32: f32 = decode(&mut dctx).unwrap();
-    // let enc_f64: f64 = decode(&mut dctx).unwrap();
+    let dec_u8 = u8::decode(&mut dctx).unwrap();
+    let dec_i8 = i8::decode(&mut dctx).unwrap();
+    let dec_u16 = u16::decode(&mut dctx).unwrap();
+    let dec_i16 = i16::decode(&mut dctx).unwrap();
+    let dec_u32 = u32::decode(&mut dctx).unwrap();
+    let dec_i32 = i32::decode(&mut dctx).unwrap();
+    let dec_u64 = u64::decode(&mut dctx).unwrap();
+    let dec_i64 = i64::decode(&mut dctx).unwrap();
+    let dec_f32 = f32::decode(&mut dctx).unwrap();
+    let dec_f64 = f64::decode(&mut dctx).unwrap();
 
+    assert!(dec_u8 == enc_u8);
+    assert!(dec_i8 == enc_i8);
+    assert!(dec_u16 == enc_u16);
+    assert!(dec_i16 == enc_i16);
+    assert!(dec_u32 == enc_u32);
+    assert!(dec_i32 == enc_i32);
+    assert!(dec_u64 == enc_u64);
+    assert!(dec_i64 == enc_i64);
+    assert!(dec_f32 == enc_f32);
+    assert!(dec_f64 == enc_f64);
 }
