@@ -26,11 +26,11 @@ spec2rust = T.pack . source
 
 source :: S.Specification -> String
 source spec = renderDoc $ vcat $ punctuate empty
-  [ s "pub mod" <+> specName <+> lbrace
-  , vcat [ indent 4 (dd <> linebreak <> rustType tp) <> linebreak
+  [ s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
+  , empty
+  , vcat [ rustType tp <> linebreak
          | tp <-  S.specTypes spec
          ]
-  , rbrace
   , empty
   ]
   where
@@ -42,14 +42,14 @@ renderDoc d = displayS (renderPretty 0.4 80 d) ""
 
 rustType :: S.Type -> Doc
 rustType tp = case S.typeDesc tp of
-    S.Array{}       -> array2slice tp
-    S.Combination{} -> combination2struct tp
-    S.Enumeration{} -> enumeration2enum tp
+    S.Array{}       -> dd <> linebreak <> array2slice tp
+    S.Combination{} -> dd <> linebreak <> combination2struct tp
+    S.Enumeration{} -> dd <> linebreak <> enumeration2enum tp
     S.Range{}       -> range2unimplemented tp
-    S.Record{}      -> record2struct tp
-    S.Synonym{}     -> synonym2newtype tp
-    S.Union{}       -> union2enum tp
-    S.Vector{}      -> vector2vec tp
+    S.Record{}      -> dd <> linebreak <> record2struct tp
+    S.Synonym{}     -> dd <> linebreak <> synonym2newtype tp
+    S.Union{}       -> dd <> linebreak <> union2enum tp
+    S.Vector{}      -> dd <> linebreak <> vector2vec tp
 
 
 vec :: Doc -> Doc

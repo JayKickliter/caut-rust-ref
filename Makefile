@@ -1,16 +1,22 @@
 .phony: executable generate
 
-priv/rust_test.spec: priv/rust_test.scm
-	stack exec cauterize -- --schema priv/rust_test.scm --specification priv/rust_test.spec
+rust/example/schema/rust_test.spec: rust/example/schema/rust_test.scm
+	stack exec cauterize -- --schema rust/example/schema/rust_test.scm --specification rust/example/schema/rust_test.spec
 
 executable:
 	stack build caut-rust-ref
 
-generate: priv/rust_test.spec executable
-	stack exec caut-rust-ref -- -s priv/rust_test.spec -o priv
+generate: rust/example/schema/rust_test.spec executable
+	stack exec caut-rust-ref -- -s rust/example/schema/rust_test.spec -o rust/example/src
 
-rustlib-build:
+rust-lib-build:
 	cargo build --manifest-path rust/cauterize/Cargo.toml
 
-rustlib-test:
+rust-lib-test:
 	cargo test --manifest-path rust/cauterize/Cargo.toml
+
+rust-example-build:
+	cargo build --manifest-path rust/example/Cargo.toml
+
+rust-example-test:
+	cargo test --manifest-path rust/example/Cargo.toml
