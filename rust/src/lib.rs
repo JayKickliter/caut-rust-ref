@@ -3,11 +3,11 @@ use std::io::{Write, Read, Cursor};
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 #[derive(Debug)]
-pub enum CautResult {
-    TakeError,
-    PutError,
-    EncodeError,
-    DecodeError,
+pub enum Error {
+    Take,
+    Put,
+    Encode,
+    Decode,
 }
 
 
@@ -36,45 +36,45 @@ impl Encoder {
 
 
 pub trait Cauterize: 'static + Sized {
-    fn decode(&mut Decoder) -> Result<Self, CautResult>;
-    fn encode(&self, &mut Encoder) -> Result<(), CautResult>;
+    fn decode(&mut Decoder) -> Result<Self, Error>;
+    fn encode(&self, &mut Encoder) -> Result<(), Error>;
 }
 
 
 impl Cauterize for u8 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0]),
-            Result::Err(_) => Result::Err(CautResult::TakeError),
+            Result::Err(_) => Result::Err(Error::Take),
         }
 
     }
 
-    fn encode(&self, enc: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
         let buf: &[u8] = &[*self];
         match enc.csr.write(buf) {
             Result::Ok(1) => Result::Ok(()),
-            _ => Result::Err(CautResult::PutError),
+            _ => Result::Err(Error::Put),
         }
 
     }
 }
 
 impl Cauterize for i8 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0] as i8),
-            Result::Err(_) => Result::Err(CautResult::TakeError),
+            Result::Err(_) => Result::Err(Error::Take),
         }
     }
 
-    fn encode(&self, enc: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
         let buf: &[u8] = &[*self as u8];
         match enc.csr.write(buf) {
             Result::Ok(1) => Result::Ok(()),
-            _ => Result::Err(CautResult::PutError),
+            _ => Result::Err(Error::Put),
         }
 
     }
@@ -82,136 +82,136 @@ impl Cauterize for i8 {
 
 
 impl Cauterize for u16 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u16::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_u16::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for i16 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i16::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_i16::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for u32 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u32::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_u32::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for i32 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i32::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_i32::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for u64 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u64::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_u64::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for i64 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i64::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_i64::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for f32 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_f32::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_f32::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 impl Cauterize for f64 {
-    fn decode(ctx: &mut Decoder) -> Result<Self, CautResult> {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_f64::<LittleEndian>() {
             Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(CautResult::DecodeError),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
-    fn encode(&self, ctx: &mut Encoder) -> Result<(), CautResult> {
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         match ctx.csr.write_f64::<LittleEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(CautResult::EncodeError),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
 
 
 #[test]
-fn it_works() {
+fn test_primitives() {
     // Create encode buffer and context
     let buf: Vec<u8> = Vec::new();
     let mut ectx = Encoder::new(buf);

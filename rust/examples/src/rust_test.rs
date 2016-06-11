@@ -82,4 +82,3 @@ pub struct ACombination {
     pub c: Option<AUnion>, // 2
     pub d: Option<()>, // 3
 }
-
