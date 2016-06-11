@@ -3,5 +3,9 @@ name = "cauterize"
 version = "0.1.0"
 authors = ["Jay Kickliter <jay@kickliter.com>"]
 
+[lib]
+name = "cauterize"
+path = "rust/src/lib.rs"
+
 [dependencies]
 byteorder = "0.5"

@@ -15,4 +15,6 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.eventlog
-.stack-work/
+.stack-work
+target
+Cargo.lock
