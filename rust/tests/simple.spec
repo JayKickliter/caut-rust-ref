@@ -1,6 +1,6 @@
 (name "simple")
 (version "0.0.1")
-(fingerprint 0169f2a4cc991babfa6afc7b48b0f2c5b15640e6)
+(fingerprint 52077d57f24217c7daddcf08447d3d39317708f1)
 (size 1 80)
 (depth 6)
 (typelength 2)
@@ -23,9 +23,9 @@
   t1
   u16)
 (type 
-  primitive_test
+  primitive_union
   union
-  (fingerprint 8e6c1c207920c0611417be800c91f231eac5b4f1)
+  (fingerprint a608e4f867023740b1af30d527ccc9d9159ae47f)
   (size 2 9)
   (depth 2)
   t1

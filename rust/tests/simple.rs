@@ -10,7 +10,7 @@ pub struct Unsigned8(u8);
 
 #[derive(Debug)]
 #[derive(PartialEq)]
-pub enum PrimitiveTest {
+pub enum PrimitiveUnion {
     U8(u8), // 0
     U16(u16), // 1
     U32(u32), // 2

@@ -35,7 +35,7 @@
         red
         green
         blue))
-(type primitive_test union
+(type primitive_union union
       (fields
         (field u8 u8)
         (field u16 u16)
