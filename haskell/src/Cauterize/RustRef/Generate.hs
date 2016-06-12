@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+
 
 module Cauterize.RustRef.Generate
-       (genRust
+       ( genRust
        ) where
 
 import qualified Cauterize.CommonTypes   as C
@@ -9,13 +11,16 @@ import           Cauterize.RustRef.Util
 import qualified Cauterize.Specification as S
 import           Data.Maybe
 import qualified Data.Text               as T
-import           Text.PrettyPrint.Leijen
+import           Text.PrettyPrint.Leijen hiding (indent)
+import qualified Text.PrettyPrint.Leijen as L
 
 
-dd :: Doc
-dd = s "#[derive(Debug)]"
-  <> linebreak
-  <> s "#[derive(PartialEq)]"
+----------------------
+-- Helper functions --
+----------------------
+
+deriveAttrs :: Doc
+deriveAttrs = s "#[derive(Debug,PartialEq)]"
 
 s :: String -> Doc
 s = string
@@ -23,16 +28,38 @@ s = string
 t :: T.Text -> Doc
 t = s . T.unpack
 
+indent :: Doc -> Doc
+indent = L.indent 4
+
+intercalate :: Doc -> [Doc] -> Doc
+intercalate s elems = sep (punctuate s elems)
+
+renderDoc :: Doc -> String
+renderDoc d = displayS (renderPretty 0.4 80 d) ""
+
+genTypeName :: C.Identifier -> Doc
+genTypeName n = s . cautNameToRustName $ n
+
+
+-----------------------
+-- Source generation --
+-----------------------
+
 genRust :: S.Specification -> T.Text
 genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource spec = renderDoc $ vcat $ punctuate empty
   [ s "#![allow(dead_code)]"
+  , s "extern crate cauterze;"
+  , s "pub use cauterize::Error;"
+  , empty
   , s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
   , empty
-  , vcat [ genType tp <> linebreak
-         | tp <-  S.specTypes spec
+  , vcat [  genType tp <> linebreak
+         <> empty <> linebreak
+         <> genImpl tp <> linebreak
+         | tp <- S.specTypes spec
          ]
   , empty
   ]
@@ -40,19 +67,23 @@ genSource spec = renderDoc $ vcat $ punctuate empty
     specName = t . S.specName $ spec
 
 
-renderDoc :: Doc -> String
-renderDoc d = displayS (renderPretty 0.4 80 d) ""
+
+
+---------------------
+-- Type generation --
+---------------------
 
 genType :: S.Type -> Doc
 genType tp = case S.typeDesc tp of
-    S.Array{}       -> dd <> linebreak <> genArrayArray tp
-    S.Combination{} -> dd <> linebreak <> genCombinationStruct tp
-    S.Enumeration{} -> dd <> linebreak <> genEnumerationEnum tp
+    S.Array{}       -> deriveAttrs <> linebreak <> genArrayArray tp
+    S.Combination{} -> deriveAttrs <> linebreak <> genCombinationStruct tp
+    S.Enumeration{} -> deriveAttrs <> linebreak <> genEnumerationEnum tp
     S.Range{}       -> range2unimplemented tp
-    S.Record{}      -> dd <> linebreak <> genRecordStruct tp
-    S.Synonym{}     -> dd <> linebreak <> genSynonymNewtype tp
-    S.Union{}       -> dd <> linebreak <> genUnionEnum tp
-    S.Vector{}      -> dd <> linebreak <> genVectorVec tp
+    S.Record{}      -> deriveAttrs <> linebreak <> genRecordStruct tp
+    S.Synonym{}     -> deriveAttrs <> linebreak <> genSynonymNewtype tp
+    S.Union{}       -> deriveAttrs <> linebreak <> genUnionEnum tp
+    S.Vector{}      -> deriveAttrs <> linebreak <> genVectorVec tp
+
 
 genVec :: Doc -> Doc
 genVec d = s "Vec" <> angles d
@@ -68,7 +99,7 @@ genNewType nm tp = s "pub struct"
 genEnum :: Doc -> [Doc] -> Doc
 genEnum nm fields = vcat
   [s "pub enum" <+> nm <+> lbrace
-  , indent 4 (vcat fields)
+  , indent (vcat fields)
   , rbrace
   ]
 
@@ -76,7 +107,7 @@ genEnum nm fields = vcat
 genStruct :: Doc -> [Doc] -> Doc
 genStruct nm fields = vcat
   [s "pub struct" <+> nm <+> lbrace
-  , indent 4 (vcat fields)
+  , indent (vcat fields)
   , rbrace
   ]
 
@@ -211,3 +242,60 @@ genFields S.Type {S.typeDesc = td} =
     S.Enumeration  evs _ -> fmap genEnumerationEnumField evs
     S.Combination fs _   -> fmap genComboStructField fs
     _                    -> error "How did I get here?"
+
+
+
+
+-----------------------
+-- Cauterize `impl`s --
+-----------------------
+
+genImpl :: S.Type -> Doc
+genImpl tp = vcat
+  [ s "impl Cauterize for" <+> nm <+> lbrace
+  , indent $ genEncode tp
+  , indent $ genDecode tp
+  , rbrace
+  ]
+  where
+    nm = s . cautNameToRustName . S.typeName $ tp
+
+
+genEncode :: S.Type -> Doc
+genEncode tp = vcat $ punctuate linebreak
+  [ s "fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error>" <+> lbrace
+  , indent $ genEncodeInner tp
+  , rbrace
+  ]
+
+genEncodeInner :: S.Type -> Doc
+genEncodeInner tp =
+  case S.typeDesc tp of
+    S.Array{}       -> empty
+    S.Combination{} -> empty
+    S.Enumeration{} -> empty
+    S.Range{}       -> empty
+    S.Record{}      -> empty
+    S.Synonym{}     -> empty
+    S.Union{}       -> empty
+    S.Vector{}      -> empty
+
+
+genDecode :: S.Type -> Doc
+genDecode tp = vcat $ punctuate linebreak
+  [ s "fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error>" <+> lbrace
+  , indent $ genDecodeInner tp
+  , rbrace
+  ]
+
+genDecodeInner :: S.Type -> Doc
+genDecodeInner tp =
+  case S.typeDesc tp of
+    S.Array{}       -> empty
+    S.Combination{} -> empty
+    S.Enumeration{} -> empty
+    S.Range{}       -> empty
+    S.Record{}      -> empty
+    S.Synonym{}     -> empty
+    S.Union{}       -> empty
+    S.Vector{}      -> empty
