@@ -7,5 +7,13 @@ authors = ["Jay Kickliter <jay@kickliter.com>"]
 name = "cauterize"
 path = "rust/src/lib.rs"
 
+[[test]]
+name = "simple"
+path = "rust/tests/test_simple.rs"
+
+[[test]]
+name = "manual"
+path = "rust/tests/test_manual.rs"
+
 [dependencies]
 byteorder = "0.5"

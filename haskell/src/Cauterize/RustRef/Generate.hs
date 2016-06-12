@@ -14,6 +14,8 @@ import           Text.PrettyPrint.Leijen
 
 dd :: Doc
 dd = s "#[derive(Debug)]"
+  <> linebreak
+  <> s "#[derive(PartialEq)]"
 
 s :: String -> Doc
 s = string
@@ -26,7 +28,8 @@ spec2rust = T.pack . source
 
 source :: S.Specification -> String
 source spec = renderDoc $ vcat $ punctuate empty
-  [ s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
+  [ s "#![allow(dead_code)]"
+  , s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
   , empty
   , vcat [ rustType tp <> linebreak
          | tp <-  S.specTypes spec

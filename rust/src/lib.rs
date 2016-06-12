@@ -8,8 +8,11 @@ pub enum Error {
     Put,
     Encode,
     Decode,
+    InvalidTag,
+    InvalidValue,
 }
 
+type CautEndian = LittleEndian;
 
 pub struct Decoder {
     pub csr: Cursor<Vec<u8>>,
@@ -57,7 +60,6 @@ impl Cauterize for u8 {
             Result::Ok(1) => Result::Ok(()),
             _ => Result::Err(Error::Put),
         }
-
     }
 }
 
@@ -76,21 +78,20 @@ impl Cauterize for i8 {
             Result::Ok(1) => Result::Ok(()),
             _ => Result::Err(Error::Put),
         }
-
     }
 }
 
 
 impl Cauterize for u16 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u16::<LittleEndian>() {
+        match ctx.csr.read_u16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u16::<LittleEndian>(*self) {
+        match ctx.csr.write_u16::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -99,14 +100,14 @@ impl Cauterize for u16 {
 
 impl Cauterize for i16 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i16::<LittleEndian>() {
+        match ctx.csr.read_i16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i16::<LittleEndian>(*self) {
+        match ctx.csr.write_i16::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -115,14 +116,14 @@ impl Cauterize for i16 {
 
 impl Cauterize for u32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u32::<LittleEndian>() {
+        match ctx.csr.read_u32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u32::<LittleEndian>(*self) {
+        match ctx.csr.write_u32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -131,14 +132,14 @@ impl Cauterize for u32 {
 
 impl Cauterize for i32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i32::<LittleEndian>() {
+        match ctx.csr.read_i32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i32::<LittleEndian>(*self) {
+        match ctx.csr.write_i32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -147,14 +148,14 @@ impl Cauterize for i32 {
 
 impl Cauterize for u64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u64::<LittleEndian>() {
+        match ctx.csr.read_u64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u64::<LittleEndian>(*self) {
+        match ctx.csr.write_u64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -163,14 +164,14 @@ impl Cauterize for u64 {
 
 impl Cauterize for i64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i64::<LittleEndian>() {
+        match ctx.csr.read_i64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i64::<LittleEndian>(*self) {
+        match ctx.csr.write_i64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -179,14 +180,14 @@ impl Cauterize for i64 {
 
 impl Cauterize for f32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_f32::<LittleEndian>() {
+        match ctx.csr.read_f32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_f32::<LittleEndian>(*self) {
+        match ctx.csr.write_f32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -195,17 +196,33 @@ impl Cauterize for f32 {
 
 impl Cauterize for f64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_f64::<LittleEndian>() {
+        match ctx.csr.read_f64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_f64::<LittleEndian>(*self) {
+        match ctx.csr.write_f64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
+    }
+}
+
+impl Cauterize for bool {
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        match u8::decode(ctx) {
+            Ok(0) => Ok(false),
+            Ok(1) => Ok(true),
+            Err(e) => Err(e),
+            _ => Err(Error::InvalidValue),
+        }
+    }
+
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        let val = *self as u8;
+        val.encode(ctx)
     }
 }
 
