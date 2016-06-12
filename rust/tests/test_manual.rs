@@ -4,18 +4,6 @@ use cauterize::*;
 mod simple;
 use simple::PrimitiveTest;
 
-// impl Cauterize for simple:: {
-// fn decode(&mut Decoder) -> Result<Self, Error> {
-// Err(Error::Decode)
-// }
-//
-// fn encode(&self, &mut Encoder) -> Result<(), Error> {
-// Err(Error::Encode)
-// }
-// }
-//
-
-
 impl Cauterize for PrimitiveTest {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let tag = try!(u8::decode(ctx));
