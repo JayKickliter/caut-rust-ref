@@ -1,6 +1,5 @@
 extern crate cauterize;
-use cauterize::*;
-#[allow(dead_code)]
+use cauterize::{Error,Cauterize,Encoder,Decoder};
 mod simple;
 use simple::PrimitiveTest;
 
