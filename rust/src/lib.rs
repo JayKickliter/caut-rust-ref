@@ -4,8 +4,6 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 #[derive(Debug)]
 pub enum Error {
-    Take,
-    Put,
     Encode,
     Decode,
     InvalidTag,
@@ -49,7 +47,7 @@ impl Cauterize for u8 {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0]),
-            Result::Err(_) => Result::Err(Error::Take),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
 
     }
@@ -58,7 +56,7 @@ impl Cauterize for u8 {
         let buf: &[u8] = &[*self];
         match enc.csr.write(buf) {
             Result::Ok(1) => Result::Ok(()),
-            _ => Result::Err(Error::Put),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
@@ -68,7 +66,7 @@ impl Cauterize for i8 {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0] as i8),
-            Result::Err(_) => Result::Err(Error::Take),
+            Result::Err(_) => Result::Err(Error::Decode),
         }
     }
 
@@ -76,7 +74,7 @@ impl Cauterize for i8 {
         let buf: &[u8] = &[*self as u8];
         match enc.csr.write(buf) {
             Result::Ok(1) => Result::Ok(()),
-            _ => Result::Err(Error::Put),
+            _ => Result::Err(Error::Encode),
         }
     }
 }
