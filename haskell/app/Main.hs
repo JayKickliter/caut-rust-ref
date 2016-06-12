@@ -40,6 +40,6 @@ createGuard out go = do
 
 generateDynamicFiles :: FilePath -> String -> S.Specification -> IO ()
 generateDynamicFiles path baseName spec = do
-  writeFile fullName (spec2rust spec)
+  writeFile fullName (genRust spec)
   where
     fullName = combine path (baseName ++ ".rs")

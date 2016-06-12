@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cauterize.RustRef.Generate
-       (spec2rust
+       (genRust
        ) where
 
 import qualified Cauterize.CommonTypes   as C
@@ -23,15 +23,15 @@ s = string
 t :: T.Text -> Doc
 t = s . T.unpack
 
-spec2rust :: S.Specification -> T.Text
-spec2rust = T.pack . source
+genRust :: S.Specification -> T.Text
+genRust = T.pack . genSource
 
-source :: S.Specification -> String
-source spec = renderDoc $ vcat $ punctuate empty
+genSource :: S.Specification -> String
+genSource spec = renderDoc $ vcat $ punctuate empty
   [ s "#![allow(dead_code)]"
   , s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
   , empty
-  , vcat [ rustType tp <> linebreak
+  , vcat [ genType tp <> linebreak
          | tp <-  S.specTypes spec
          ]
   , empty
@@ -43,39 +43,38 @@ source spec = renderDoc $ vcat $ punctuate empty
 renderDoc :: Doc -> String
 renderDoc d = displayS (renderPretty 0.4 80 d) ""
 
-rustType :: S.Type -> Doc
-rustType tp = case S.typeDesc tp of
-    S.Array{}       -> dd <> linebreak <> array2slice tp
-    S.Combination{} -> dd <> linebreak <> combination2struct tp
-    S.Enumeration{} -> dd <> linebreak <> enumeration2enum tp
+genType :: S.Type -> Doc
+genType tp = case S.typeDesc tp of
+    S.Array{}       -> dd <> linebreak <> genArrayArray tp
+    S.Combination{} -> dd <> linebreak <> genCombinationStruct tp
+    S.Enumeration{} -> dd <> linebreak <> genEnumerationEnum tp
     S.Range{}       -> range2unimplemented tp
-    S.Record{}      -> dd <> linebreak <> record2struct tp
-    S.Synonym{}     -> dd <> linebreak <> synonym2newtype tp
-    S.Union{}       -> dd <> linebreak <> union2enum tp
-    S.Vector{}      -> dd <> linebreak <> vector2vec tp
+    S.Record{}      -> dd <> linebreak <> genRecordStruct tp
+    S.Synonym{}     -> dd <> linebreak <> genSynonymNewtype tp
+    S.Union{}       -> dd <> linebreak <> genUnionEnum tp
+    S.Vector{}      -> dd <> linebreak <> genVectorVec tp
+
+genVec :: Doc -> Doc
+genVec d = s "Vec" <> angles d
 
 
-vec :: Doc -> Doc
-vec d = s "Vec" <> angles d
-
-
-newType :: Doc -> Doc -> Doc
-newType nm tp = s "pub struct"
+genNewType :: Doc -> Doc -> Doc
+genNewType nm tp = s "pub struct"
             <+> nm
             <>  parens tp
             <>  semi
 
 
-enum :: Doc -> [Doc] -> Doc
-enum nm fields = vcat
+genEnum :: Doc -> [Doc] -> Doc
+genEnum nm fields = vcat
   [s "pub enum" <+> nm <+> lbrace
   , indent 4 (vcat fields)
   , rbrace
   ]
 
 
-struct :: Doc -> [Doc] -> Doc
-struct nm fields = vcat
+genStruct :: Doc -> [Doc] -> Doc
+genStruct nm fields = vcat
   [s "pub struct" <+> nm <+> lbrace
   , indent 4 (vcat fields)
   , rbrace
@@ -95,28 +94,28 @@ range2unimplemented tp = vcat
     nm = s. cautNameToRustName . S.typeName $ tp
 
 
-combination2struct :: S.Type -> Doc
-combination2struct tp = struct nm fields
+genCombinationStruct :: S.Type -> Doc
+genCombinationStruct tp = genStruct nm fields
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
-    fields = cautFieldsToRustFields tp
+    fields = genFields tp
 
-record2struct :: S.Type -> Doc
-record2struct tp = struct nm fields
+genRecordStruct :: S.Type -> Doc
+genRecordStruct tp = genStruct nm fields
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
-    fields = cautFieldsToRustFields tp
+    fields = genFields tp
 
 
-enumeration2enum :: S.Type -> Doc
-enumeration2enum tp = enum nm fields
+genEnumerationEnum :: S.Type -> Doc
+genEnumerationEnum tp = genEnum nm fields
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
-    fields = cautFieldsToRustFields tp
+    fields = genFields tp
 
 
-array2slice :: S.Type -> Doc
-array2slice tp = s "pub struct"
+genArrayArray :: S.Type -> Doc
+genArrayArray tp = s "pub struct"
              <+> nm
               <> (parens . brackets $ elType <> semi <+> sz)
               <> semi
@@ -128,8 +127,8 @@ array2slice tp = s "pub struct"
 
 
 
-vector2vec :: S.Type -> Doc
-vector2vec tp = newType nm (vec elType)
+genVectorVec :: S.Type -> Doc
+genVectorVec tp = genNewType nm (genVec elType)
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
     td     = S.typeDesc tp
@@ -137,15 +136,15 @@ vector2vec tp = newType nm (vec elType)
 
 
 
-union2enum :: S.Type -> Doc
-union2enum tp = enum nm fields
+genUnionEnum :: S.Type -> Doc
+genUnionEnum tp = genEnum nm fields
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
-    fields = cautFieldsToRustFields tp
+    fields = genFields tp
 
 
-synonym2newtype :: S.Type -> Doc
-synonym2newtype tp = newType nm st
+genSynonymNewtype :: S.Type -> Doc
+genSynonymNewtype tp = genNewType nm st
   where
     nm = s . cautNameToRustName . S.typeName $ tp
     td = S.typeDesc tp
@@ -153,62 +152,62 @@ synonym2newtype tp = newType nm st
     st = s . cautNameToRustName $ sr
 
 
-field2structField :: S.Field -> Doc
-field2structField (S.DataField n i r) =
+genStructField :: S.Field -> Doc
+genStructField (S.DataField n i r) =
   s "pub" <+> nm <> colon <+> fieldType <> comma <+> comment idx
   where
     nm        = t . C.unIdentifier $  n
     fieldType = s . cautNameToRustName $ r
     idx       = s . show $ i
-field2structField (S.EmptyField _ _) = empty
+genStructField (S.EmptyField _ _) = empty
 
 
-field2enumField :: S.Field -> Doc
-field2enumField (S.DataField n i r) =
+genEnumField :: S.Field -> Doc
+genEnumField (S.DataField n i r) =
   nm <> parens fieldType <> comma <+> comment idx
   where
     nm        = t . titleCase . C.unIdentifier $  n
     fieldType = s . cautNameToRustName $ r
     idx       = s . show $ i
-field2enumField (S.EmptyField n i) =
+genEnumField (S.EmptyField n i) =
   nm <> comma <+> comment idx
   where
     nm        = t . titleCase . C.unIdentifier $  n
     idx       = s . show $ i
 
 
-option :: Maybe Doc -> Doc
-option ot = s "Option" <> angles a
+genOption :: Maybe Doc -> Doc
+genOption ot = s "Option" <> angles a
   where
    a = fromMaybe (s "()") ot
 
 
-comboField2structField :: S.Field -> Doc
-comboField2structField (S.DataField n i r) =
-  s "pub" <+> nm <> colon <+> option fieldType <> comma <+> comment idx
+genComboStructField :: S.Field -> Doc
+genComboStructField (S.DataField n i r) =
+  s "pub" <+> nm <> colon <+> genOption fieldType <> comma <+> comment idx
   where
     nm        = t . C.unIdentifier $ n
     fieldType = Just . s . cautNameToRustName $ r
     idx       = s . show $ i
-comboField2structField (S.EmptyField n i) =
-  s "pub" <+> nm <> colon <+> option Nothing <> comma <+> comment idx
+genComboStructField (S.EmptyField n i) =
+  s "pub" <+> nm <> colon <+> genOption Nothing <> comma <+> comment idx
   where
     nm  = t . C.unIdentifier $ n
     idx = s . show $ i
 
 
-enumVal2enumField :: S.EnumVal -> Doc
-enumVal2enumField (S.EnumVal n i) = nm <> comma <+> comment idx
+genEnumerationEnumField :: S.EnumVal -> Doc
+genEnumerationEnumField (S.EnumVal n i) = nm <> comma <+> comment idx
   where
     nm  = s . T.unpack . titleCase . C.unIdentifier $ n
     idx = s . show $ i
 
 
-cautFieldsToRustFields :: S.Type -> [Doc]
-cautFieldsToRustFields S.Type {S.typeDesc = td} =
+genFields :: S.Type -> [Doc]
+genFields S.Type {S.typeDesc = td} =
   case td of
-    S.Record fs          -> fmap field2structField fs
-    S.Union  fs _        -> fmap field2enumField fs
-    S.Enumeration  evs _ -> fmap enumVal2enumField evs
-    S.Combination fs _   -> fmap comboField2structField fs
+    S.Record fs          -> fmap genStructField fs
+    S.Union  fs _        -> fmap genEnumField fs
+    S.Enumeration  evs _ -> fmap genEnumerationEnumField evs
+    S.Combination fs _   -> fmap genComboStructField fs
     _                    -> error "How did I get here?"
