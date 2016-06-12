@@ -42,6 +42,11 @@ genTypeName n = s . cautNameToRustName $ n
 genUnsafe :: Doc -> Doc
 genUnsafe d = s "unsafe" <+> braces (space <> d <> space)
 
+genTry :: Doc -> Doc
+genTry d = s "try!" <> parens d
+
+genOk :: Doc -> Doc
+genOk d = s "Ok" <> parens d
 
 -----------------------
 -- Source generation --
@@ -255,6 +260,7 @@ genImpl :: S.Type -> Doc
 genImpl tp = vcat
   [ s "impl Cauterize for" <+> nm <+> lbrace
   , indent $ genEncode tp
+  , empty
   , indent $ genDecode tp
   , rbrace
   ]
@@ -277,7 +283,7 @@ genEncodeInner tp =
     S.Enumeration{} -> s "unimplemented!();"
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> s "unimplemented!();"
-    S.Synonym{}     -> s "unimplemented!();"
+    S.Synonym{..}   -> genEncodeNewtype nm
     S.Union{}       -> s "unimplemented!();"
     S.Vector{}      -> s "unimplemented!();"
     where
@@ -291,6 +297,18 @@ genDecode tp = vcat
   , rbrace
   ]
 
+genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
+genEncodeArray nm id len = vcat
+  [ s "let ref elems = self.0;"
+  , s "for elem in elems.iter() {"
+  , indent . s $ "try!(elem.encode(ctx));"
+  , rbrace
+  , s "Ok(())"
+  ]
+  where
+    elType = s . cautNameToRustName $ id
+    sz     = s . show $ len
+
 genDecodeInner :: S.Type -> Doc
 genDecodeInner tp =
   case S.typeDesc tp of
@@ -299,7 +317,7 @@ genDecodeInner tp =
     S.Enumeration{} -> s "unimplemented!();"
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> s "unimplemented!();"
-    S.Synonym{}     -> s "unimplemented!();"
+    S.Synonym{..}   -> genDecodeNewtype nm synonymRef
     S.Union{}       -> s "unimplemented!();"
     S.Vector{}      -> s "unimplemented!();"
     where
@@ -319,14 +337,12 @@ genDecodeArray nm id len = vcat
     elType = s . cautNameToRustName $ id
     sz     = s . show $ len
 
-genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
-genEncodeArray nm id len = vcat
-  [ s "let ref elems = self.0;"
-  , s "for elem in elems.iter() {"
-  , indent . s $ "try!(elem.encode(ctx));"
-  , rbrace
-  , s "Ok(())"
-  ]
+genEncodeNewtype :: Doc -> Doc
+genEncodeNewtype nm = s "let &" <> nm <> parens (s "ref inner") <+> s "= self;"
+              <$$> genTry (s "inner.encode(ctx)") <> semi
+              <$$> genOk (parens empty)
+
+genDecodeNewtype :: Doc -> C.Identifier -> Doc
+genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(ctx)")))
   where
-    elType = s . cautNameToRustName $ id
-    sz     = s . show $ len
+    innerType = s . cautNameToRustName $ id

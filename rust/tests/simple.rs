@@ -11,10 +11,13 @@ pub struct Unsigned8(pub u8);
 
 impl Cauterize for Unsigned8 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let &Unsigned8(ref inner) = self;
+        try!(inner.encode(ctx));
+        Ok(())
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        Ok(Unsigned8(try!(u8::decode(ctx))))
     }
 }
 
@@ -27,6 +30,7 @@ impl Cauterize for SomeRange {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -51,6 +55,7 @@ impl Cauterize for PrimitiveUnion {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -61,10 +66,13 @@ pub struct Number64(pub i64);
 
 impl Cauterize for Number64 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let &Number64(ref inner) = self;
+        try!(inner.encode(ctx));
+        Ok(())
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        Ok(Number64(try!(i64::decode(ctx))))
     }
 }
 
@@ -79,6 +87,7 @@ impl Cauterize for SomeArray {
         }
         Ok(())
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let mut arr: [Number64; 8] = unsafe { mem::uninitialized() };
         for i in 0..8 {
@@ -95,6 +104,7 @@ impl Cauterize for SomeVector {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -111,6 +121,7 @@ impl Cauterize for FieldEnum {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -123,6 +134,7 @@ impl Cauterize for Header {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -139,6 +151,7 @@ impl Cauterize for Color {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -154,6 +167,7 @@ impl Cauterize for CRecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -169,6 +183,7 @@ impl Cauterize for BRecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -185,6 +200,7 @@ impl Cauterize for ARecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -203,6 +219,7 @@ impl Cauterize for AUnion {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
@@ -220,6 +237,7 @@ impl Cauterize for ACombination {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
         unimplemented!();
     }
+
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         unimplemented!();
     }
