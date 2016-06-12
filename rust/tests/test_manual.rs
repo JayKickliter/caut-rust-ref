@@ -1,5 +1,5 @@
 extern crate cauterize;
-use cauterize::{Error,Cauterize,Encoder,Decoder};
+use cauterize::{Error, Cauterize, Encoder, Decoder};
 mod simple;
 use simple::PrimitiveTest;
 
