@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
+{-# LANGUAGE RecordWildCards   #-}
 
 module Cauterize.RustRef.Generate
        ( genRust
@@ -40,6 +39,9 @@ renderDoc d = displayS (renderPretty 0.4 80 d) ""
 genTypeName :: C.Identifier -> Doc
 genTypeName n = s . cautNameToRustName $ n
 
+genUnsafe :: Doc -> Doc
+genUnsafe d = s "unsafe" <+> braces (space <> d <> space)
+
 
 -----------------------
 -- Source generation --
@@ -50,11 +52,13 @@ genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource spec = renderDoc $ vcat $ punctuate empty
-  [ s "#![allow(dead_code)]"
-  , s "extern crate cauterze;"
-  , s "pub use cauterize::Error;"
+  [ s "#![allow(dead_code,unused_variables)]"
+  , s "extern crate cauterize;"
+  , s "use self::cauterize::{Encoder, Decoder, Cauterize};"
+  , s "pub use self::cauterize::Error;"
+  , s "use std::mem;"
   , empty
-  , s "pub static SPEC_NAME:  &'static str = " <+> dquotes specName <> semi
+  , s "pub static SPEC_NAME: &'static str =" <+> dquotes specName <> semi
   , empty
   , vcat [  genType tp <> linebreak
          <> empty <> linebreak
@@ -92,7 +96,7 @@ genVec d = s "Vec" <> angles d
 genNewType :: Doc -> Doc -> Doc
 genNewType nm tp = s "pub struct"
             <+> nm
-            <>  parens tp
+            <>  parens (s "pub" <+> tp)
             <>  semi
 
 
@@ -119,7 +123,7 @@ comment d = s "//" <+> d
 range2unimplemented :: S.Type -> Doc
 range2unimplemented tp = vcat
   [ comment $ s "Range type not yet implemented."
-  , comment $ s "Not declaring range" <+> nm
+  , genEnum nm [empty]
   ]
   where
     nm = s. cautNameToRustName . S.typeName $ tp
@@ -146,10 +150,7 @@ genEnumerationEnum tp = genEnum nm fields
 
 
 genArrayArray :: S.Type -> Doc
-genArrayArray tp = s "pub struct"
-             <+> nm
-              <> (parens . brackets $ elType <> semi <+> sz)
-              <> semi
+genArrayArray tp = genNewType nm (brackets $ elType <> semi <+> sz)
   where
     nm     = s . cautNameToRustName . S.typeName $ tp
     td     = S.typeDesc tp
@@ -262,8 +263,8 @@ genImpl tp = vcat
 
 
 genEncode :: S.Type -> Doc
-genEncode tp = vcat $ punctuate linebreak
-  [ s "fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error>" <+> lbrace
+genEncode tp = vcat
+  [ s "fn encode(&self, ctx: &mut Encoder) -> Result<(), Error>" <+> lbrace
   , indent $ genEncodeInner tp
   , rbrace
   ]
@@ -271,19 +272,21 @@ genEncode tp = vcat $ punctuate linebreak
 genEncodeInner :: S.Type -> Doc
 genEncodeInner tp =
   case S.typeDesc tp of
-    S.Array{}       -> empty
-    S.Combination{} -> empty
-    S.Enumeration{} -> empty
-    S.Range{}       -> empty
-    S.Record{}      -> empty
-    S.Synonym{}     -> empty
-    S.Union{}       -> empty
-    S.Vector{}      -> empty
+    S.Array{..}     -> genEncodeArray nm arrayRef arrayLength
+    S.Combination{} -> s "unimplemented!();"
+    S.Enumeration{} -> s "unimplemented!();"
+    S.Range{}       -> s "unimplemented!();"
+    S.Record{}      -> s "unimplemented!();"
+    S.Synonym{}     -> s "unimplemented!();"
+    S.Union{}       -> s "unimplemented!();"
+    S.Vector{}      -> s "unimplemented!();"
+    where
+      nm = s . cautNameToRustName . S.typeName $ tp
 
 
 genDecode :: S.Type -> Doc
-genDecode tp = vcat $ punctuate linebreak
-  [ s "fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error>" <+> lbrace
+genDecode tp = vcat
+  [ s "fn decode(ctx: &mut Decoder) -> Result<Self, Error>" <+> lbrace
   , indent $ genDecodeInner tp
   , rbrace
   ]
@@ -291,11 +294,39 @@ genDecode tp = vcat $ punctuate linebreak
 genDecodeInner :: S.Type -> Doc
 genDecodeInner tp =
   case S.typeDesc tp of
-    S.Array{}       -> empty
-    S.Combination{} -> empty
-    S.Enumeration{} -> empty
-    S.Range{}       -> empty
-    S.Record{}      -> empty
-    S.Synonym{}     -> empty
-    S.Union{}       -> empty
-    S.Vector{}      -> empty
+    S.Array {..}    -> genDecodeArray nm arrayRef arrayLength
+    S.Combination{} -> s "unimplemented!();"
+    S.Enumeration{} -> s "unimplemented!();"
+    S.Range{}       -> s "unimplemented!();"
+    S.Record{}      -> s "unimplemented!();"
+    S.Synonym{}     -> s "unimplemented!();"
+    S.Union{}       -> s "unimplemented!();"
+    S.Vector{}      -> s "unimplemented!();"
+    where
+      nm = s . cautNameToRustName . S.typeName $ tp
+
+genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
+genDecodeArray nm id len = vcat
+  [ s "let mut arr:" <+> brackets (elType <> semi <+> sz)
+                     <+> equals
+                     <+> genUnsafe (s "mem::uninitialized()") <> semi
+  , s "for i in 0.." <> sz <+> lbrace
+  , indent (s "arr[i] = try!" <> parens (elType <> s "::decode(ctx)") <> semi)
+  , rbrace
+  , s "Ok" <> parens (nm <> parens (s "arr"))
+  ]
+  where
+    elType = s . cautNameToRustName $ id
+    sz     = s . show $ len
+
+genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
+genEncodeArray nm id len = vcat
+  [ s "let ref elems = self.0;"
+  , s "for elem in elems.iter() {"
+  , indent . s $ "try!(elem.encode(ctx));"
+  , rbrace
+  , s "Ok(())"
+  ]
+  where
+    elType = s . cautNameToRustName $ id
+    sz     = s . show $ len

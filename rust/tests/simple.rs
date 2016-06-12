@@ -1,38 +1,34 @@
-#![allow(dead_code)]
-extern crate cauterze;
-pub use cauterize::Error;
+#![allow(dead_code,unused_variables)]
+extern crate cauterize;
+use self::cauterize::{Encoder, Decoder, Cauterize};
+pub use self::cauterize::Error;
+use std::mem;
 
-pub static SPEC_NAME:  &'static str =  "simple";
+pub static SPEC_NAME: &'static str = "simple";
 
 #[derive(Debug,PartialEq)]
-pub struct Unsigned8(u8);
+pub struct Unsigned8(pub u8);
 
 impl Cauterize for Unsigned8 {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
 // Range type not yet implemented.
-// Not declaring range SomeRange
+pub enum SomeRange {
+    
+}
 
 impl Cauterize for SomeRange {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -52,63 +48,55 @@ pub enum PrimitiveUnion {
 }
 
 impl Cauterize for PrimitiveUnion {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
 #[derive(Debug,PartialEq)]
-pub struct Number64(i64);
+pub struct Number64(pub i64);
 
 impl Cauterize for Number64 {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
 #[derive(Debug,PartialEq)]
-pub struct SomeArray([Number64; 8]);
+pub struct SomeArray(pub [Number64; 8]);
 
 impl Cauterize for SomeArray {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        let ref elems = self.0;
+        for elem in elems.iter() {
+            try!(elem.encode(ctx));
+        }
+        Ok(())
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        let mut arr: [Number64; 8] = unsafe { mem::uninitialized() };
+        for i in 0..8 {
+            arr[i] = try!(Number64::decode(ctx));
+        }
+        Ok(SomeArray(arr))
     }
 }
 
 #[derive(Debug,PartialEq)]
-pub struct SomeVector(Vec<Number64>);
+pub struct SomeVector(pub Vec<Number64>);
 
 impl Cauterize for SomeVector {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -120,31 +108,23 @@ pub enum FieldEnum {
 }
 
 impl Cauterize for FieldEnum {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
 #[derive(Debug,PartialEq)]
-pub struct Header(Vec<FieldEnum>);
+pub struct Header(pub Vec<FieldEnum>);
 
 impl Cauterize for Header {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -156,15 +136,11 @@ pub enum Color {
 }
 
 impl Cauterize for Color {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -175,15 +151,11 @@ pub struct CRecord {
 }
 
 impl Cauterize for CRecord {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -194,15 +166,11 @@ pub struct BRecord {
 }
 
 impl Cauterize for BRecord {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -214,15 +182,11 @@ pub struct ARecord {
 }
 
 impl Cauterize for ARecord {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -236,15 +200,11 @@ pub enum AUnion {
 }
 
 impl Cauterize for AUnion {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
@@ -257,15 +217,11 @@ pub struct ACombination {
 }
 
 impl Cauterize for ACombination {
-    fn encode(ctx: &mut Encoder) -> Result<(), cauterize::Error> {
-    
-        
-    
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        unimplemented!();
     }
-    fn decode(ctx: &mut Decoder) -> Result<Self, cauterize::Error> {
-    
-        
-    
+    fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        unimplemented!();
     }
 }
 
