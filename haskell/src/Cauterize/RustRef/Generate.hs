@@ -67,6 +67,25 @@ genRepr r = s "#[repr" <> parens r <> rbracket
 genTagTypeName :: C.Tag -> Doc
 genTagTypeName = s . cautTagToRustType
 
+genUnit :: Doc
+genUnit = s "()"
+
+genMatch :: Doc -> Doc -> Doc
+genMatch pat stmts = pat <+> s "=>" <+> braces
+                     ( linebreak
+                    <> indent stmts
+                    <> linebreak
+                     )
+
+genColonColon :: Doc
+genColonColon = s "::"
+
+genAmp :: Doc
+genAmp = s "&"
+
+genRef :: Doc -> Doc
+genRef a = genAmp <> a
+
 -----------------------
 -- Source generation --
 -----------------------
@@ -273,9 +292,9 @@ genEncodeInner tp =
     S.Combination{} -> s "unimplemented!();"
     S.Enumeration{} -> genEncodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
-    S.Record{}      -> s "unimplemented!();"
+    S.Record{}      -> genEncodeRecordStruct nm tp
     S.Synonym{..}   -> genEncodeNewtype nm
-    S.Union{}       -> s "unimplemented!();"
+    S.Union{}       -> genEncodeEnum nm tp
     S.Vector{}      -> s "unimplemented!();"
     where
       nm = genTypeName . S.typeName $ tp
@@ -294,9 +313,9 @@ genDecodeInner tp =
     S.Combination{} -> s "unimplemented!();"
     S.Enumeration{} -> genDecodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
-    S.Record{}      -> s "unimplemented!();"
+    S.Record{}      -> genDecodeRecordStruct nm tp
     S.Synonym{..}   -> genDecodeNewtype nm synonymRef
-    S.Union{}       -> s "unimplemented!();"
+    S.Union{}       -> genDecodeEnum nm tp
     S.Vector{}      -> s "unimplemented!();"
     where
       nm = genTypeName . S.typeName $ tp
@@ -358,3 +377,63 @@ genDecodeEnumerationEnum tp = s "let tag = " <> genTry (tagType <> s "::decode(c
     td      = S.typeDesc tp
     tagType = genTagTypeName . S.enumerationTag $ td
     maxTag  = s . show $ ((length . S.enumerationValues $ td) - 1)
+
+genEncodeEnum :: Doc -> S.Type -> Doc
+genEncodeEnum nm tp = s "match self" <+> braces
+                       ( linebreak
+                         <> indent (vcat (map (genEncodeEnumMatchArm nm) (S.unionFields td)))
+                         <> linebreak
+                       ) <> semi
+                  <$$> genOk genUnit
+  where
+    td = S.typeDesc tp
+    tagType = genTagTypeName . S.unionTag $ td
+    genEncodeEnumMatchArm :: Doc -> S.Field -> Doc
+    genEncodeEnumMatchArm nm field = genMatch pattern statements
+      where
+        variantName = genFieldName (S.fieldName field)
+        idx = s (show (S.fieldIndex field))
+        (pattern, statements) = case field of
+          S.EmptyField {..} -> ( genRef (nm <> genColonColon <> variantName)
+                               , s "let tag:" <+> tagType <+> equals <+> idx <> semi <$$>
+                                 genTry (s "tag.encode(ctx)") <> semi
+                               )
+          S.DataField {..}  -> ( genRef (nm <> genColonColon <> variantName <> parens (s "ref val"))
+                               , s "let tag:" <+> tagType <+> equals <+> idx <> semi
+                                 <$$> genTry (s "tag.encode(ctx)") <> semi
+                                 <$$> genTry (s "val.encode(ctx)") <> semi
+                               )
+
+genDecodeEnum :: Doc -> S.Type -> Doc
+genDecodeEnum nm tp = s "let tag =" <+> genTry (tagType <> s "::decode(ctx)") <> semi
+                  <$$> s "match tag" <+> braces
+                       ( linebreak
+                      <> indent
+                         ( vcat (map (genDecodeEnumMatchArm nm) (S.unionFields td))
+                           <$$> s "_" <+> s "=>"  <+> s "Err(Error::InvalidTag),"
+                         )
+                      <> linebreak
+                       )
+  where
+    td = S.typeDesc tp
+    tagType = genTagTypeName . S.unionTag $ td
+
+    genDecodeEnumMatchArm :: Doc -> S.Field -> Doc
+    genDecodeEnumMatchArm nm field = pattern <+> s "=>" <+> statements <> comma
+      where
+        variantName = genFieldName (S.fieldName field)
+        idx = s (show (S.fieldIndex field))
+        (pattern, statements) = case field of
+          S.EmptyField {..} -> (idx , genOk (nm <> genColonColon <> variantName))
+          S.DataField {..}  -> (idx , genOk (nm <> genColonColon <> variantName <> parens
+                                             (genTry ( variantType <> s "::decode(ctx)"))
+                                            )
+                               )
+            where
+              variantType = genTypeName fieldRef
+
+genEncodeRecordStruct :: Doc -> S.Type -> Doc
+genEncodeRecordStruct _ _ = s "unimplemented!();"
+
+genDecodeRecordStruct :: Doc -> S.Type -> Doc
+genDecodeRecordStruct _ _ = s "unimplemented!();"

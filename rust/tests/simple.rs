@@ -53,11 +53,82 @@ pub enum PrimitiveUnion {
 
 impl Cauterize for PrimitiveUnion {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        match self {
+            &PrimitiveUnion::U8(ref val) => {
+                let tag: u8 = 0;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::U16(ref val) => {
+                let tag: u8 = 1;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::U32(ref val) => {
+                let tag: u8 = 2;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::U64(ref val) => {
+                let tag: u8 = 3;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::S8(ref val) => {
+                let tag: u8 = 4;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::S16(ref val) => {
+                let tag: u8 = 5;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::S32(ref val) => {
+                let tag: u8 = 6;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::S64(ref val) => {
+                let tag: u8 = 7;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::Bool(ref val) => {
+                let tag: u8 = 8;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::F32(ref val) => {
+                let tag: u8 = 9;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &PrimitiveUnion::F64(ref val) => {
+                let tag: u8 = 10;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+        };
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let tag = try!(u8::decode(ctx));
+        match tag {
+            0 => Ok(PrimitiveUnion::U8(try!(u8::decode(ctx)))),
+            1 => Ok(PrimitiveUnion::U16(try!(u16::decode(ctx)))),
+            2 => Ok(PrimitiveUnion::U32(try!(u32::decode(ctx)))),
+            3 => Ok(PrimitiveUnion::U64(try!(u64::decode(ctx)))),
+            4 => Ok(PrimitiveUnion::S8(try!(i8::decode(ctx)))),
+            5 => Ok(PrimitiveUnion::S16(try!(i16::decode(ctx)))),
+            6 => Ok(PrimitiveUnion::S32(try!(i32::decode(ctx)))),
+            7 => Ok(PrimitiveUnion::S64(try!(i64::decode(ctx)))),
+            8 => Ok(PrimitiveUnion::Bool(try!(bool::decode(ctx)))),
+            9 => Ok(PrimitiveUnion::F32(try!(f32::decode(ctx)))),
+            10 => Ok(PrimitiveUnion::F64(try!(f64::decode(ctx)))),
+            _ => Err(Error::InvalidTag),
+        }
     }
 }
 
@@ -231,11 +302,45 @@ pub enum AUnion {
 
 impl Cauterize for AUnion {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        match self {
+            &AUnion::A(ref val) => {
+                let tag: u8 = 0;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &AUnion::B(ref val) => {
+                let tag: u8 = 1;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &AUnion::C(ref val) => {
+                let tag: u8 = 2;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &AUnion::D(ref val) => {
+                let tag: u8 = 3;
+                try!(tag.encode(ctx));
+                try!(val.encode(ctx));
+            }
+            &AUnion::E => {
+                let tag: u8 = 4;
+                try!(tag.encode(ctx));
+            }
+        };
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let tag = try!(u8::decode(ctx));
+        match tag {
+            0 => Ok(AUnion::A(try!(ARecord::decode(ctx)))),
+            1 => Ok(AUnion::B(try!(BRecord::decode(ctx)))),
+            2 => Ok(AUnion::C(try!(i8::decode(ctx)))),
+            3 => Ok(AUnion::D(try!(Number64::decode(ctx)))),
+            4 => Ok(AUnion::E),
+            _ => Err(Error::InvalidTag),
+        }
     }
 }
 
