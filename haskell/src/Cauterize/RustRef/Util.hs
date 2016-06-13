@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cauterize.RustRef.Util
-  (cautNameToRustName
+  (cautTypeToRustType
   ,nonEmpty
   ,titleCase
+  ,cautFieldToRustField
   ) where
 
 
@@ -24,10 +25,13 @@ titleCase t = T.concat $ map T.toTitle $ T.split (== '_') t
 isCautPrim :: C.Identifier -> Bool
 isCautPrim i = i `elem` C.allPrimNames
 
-cautNameToRustName :: C.Identifier -> String
-cautNameToRustName i = if isCautPrim i
+cautTypeToRustType :: C.Identifier -> String
+cautTypeToRustType i = if isCautPrim i
   then T.unpack . cautPrimToRustPrim $ i
   else T.unpack . titleCase . C.unIdentifier $ i
+
+cautFieldToRustField :: C.Identifier -> String
+cautFieldToRustField  = T.unpack . titleCase . C.unIdentifier
 
 nonEmpty :: [T.Text] -> [T.Text]
 nonEmpty = filter (not . (T.empty ==))

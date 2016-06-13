@@ -18,8 +18,17 @@ import qualified Text.PrettyPrint.Leijen as L
 -- Helper functions --
 ----------------------
 
-deriveAttrs :: Doc
-deriveAttrs = s "#[derive(Debug,PartialEq)]"
+-- | Rust attribute tags
+data Attribute = Debug
+               | Default
+               | PartialEq
+instance Pretty Attribute where
+  pretty Debug     = s "Debug"
+  pretty Default   = s "Default"
+  pretty PartialEq = s "PartialEq"
+
+genDerive :: [Attribute] -> Doc
+genDerive attrs = s "#[derive" <> parens (cat (punctuate comma (map pretty attrs))) <> rbracket
 
 s :: String -> Doc
 s = string
@@ -37,7 +46,10 @@ renderDoc :: Doc -> String
 renderDoc d = displayS (renderPretty 0.4 80 d) ""
 
 genTypeName :: C.Identifier -> Doc
-genTypeName n = s . cautNameToRustName $ n
+genTypeName n = s . cautTypeToRustType $ n
+
+genFieldName :: C.Identifier -> Doc
+genFieldName = s . cautFieldToRustField
 
 genUnsafe :: Doc -> Doc
 genUnsafe d = s "unsafe" <+> braces (space <> d <> space)
@@ -47,6 +59,7 @@ genTry d = s "try!" <> parens d
 
 genOk :: Doc -> Doc
 genOk d = s "Ok" <> parens d
+
 
 -----------------------
 -- Source generation --
@@ -76,34 +89,31 @@ genSource spec = renderDoc $ vcat $ punctuate empty
     specName = t . S.specName $ spec
 
 
-
-
 ---------------------
 -- Type generation --
 ---------------------
 
 genType :: S.Type -> Doc
 genType tp = case S.typeDesc tp of
-    S.Array{}       -> deriveAttrs <> linebreak <> genArrayArray tp
-    S.Combination{} -> deriveAttrs <> linebreak <> genCombinationStruct tp
-    S.Enumeration{} -> deriveAttrs <> linebreak <> genEnumerationEnum tp
-    S.Range{}       -> range2unimplemented tp
-    S.Record{}      -> deriveAttrs <> linebreak <> genRecordStruct tp
-    S.Synonym{}     -> deriveAttrs <> linebreak <> genSynonymNewtype tp
-    S.Union{}       -> deriveAttrs <> linebreak <> genUnionEnum tp
-    S.Vector{}      -> deriveAttrs <> linebreak <> genVectorVec tp
-
+    S.Array{}       -> genDerive [Debug,PartialEq] <$$> genArrayArray nm tp
+    S.Combination{} -> genDerive [Debug,PartialEq] <$$> genCombinationStruct nm tp
+    S.Enumeration{} -> genDerive [Debug,PartialEq] <$$> genEnumerationEnum nm tp
+    S.Range{}       -> range2unimplemented nm tp
+    S.Record{}      -> genDerive [Debug,PartialEq] <$$> genRecordStruct nm tp
+    S.Synonym{}     -> genDerive [Debug,PartialEq] <$$> genSynonymNewtype nm tp
+    S.Union{}       -> genDerive [Debug,PartialEq] <$$> genUnionEnum nm tp
+    S.Vector{}      -> genDerive [Debug,PartialEq] <$$> genVectorVec nm tp
+    where
+      nm = genTypeName $ S.typeName tp
 
 genVec :: Doc -> Doc
 genVec d = s "Vec" <> angles d
-
 
 genNewType :: Doc -> Doc -> Doc
 genNewType nm tp = s "pub struct"
             <+> nm
             <>  parens (s "pub" <+> tp)
             <>  semi
-
 
 genEnum :: Doc -> [Doc] -> Doc
 genEnum nm fields = vcat
@@ -112,7 +122,6 @@ genEnum nm fields = vcat
   , rbrace
   ]
 
-
 genStruct :: Doc -> [Doc] -> Doc
 genStruct nm fields = vcat
   [s "pub struct" <+> nm <+> lbrace
@@ -120,91 +129,70 @@ genStruct nm fields = vcat
   , rbrace
   ]
 
-
 comment :: Doc -> Doc
 comment d = s "//" <+> d
 
-
-range2unimplemented :: S.Type -> Doc
-range2unimplemented tp = vcat
+range2unimplemented :: Doc -> S.Type -> Doc
+range2unimplemented nm tp = vcat
   [ comment $ s "Range type not yet implemented."
   , genEnum nm [empty]
   ]
-  where
-    nm = s. cautNameToRustName . S.typeName $ tp
 
-
-genCombinationStruct :: S.Type -> Doc
-genCombinationStruct tp = genStruct nm fields
+genCombinationStruct :: Doc -> S.Type -> Doc
+genCombinationStruct nm tp = genStruct nm fields
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     fields = genFields tp
 
-genRecordStruct :: S.Type -> Doc
-genRecordStruct tp = genStruct nm fields
+genRecordStruct :: Doc -> S.Type -> Doc
+genRecordStruct nm tp = genStruct nm fields
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     fields = genFields tp
 
-
-genEnumerationEnum :: S.Type -> Doc
-genEnumerationEnum tp = genEnum nm fields
+genEnumerationEnum :: Doc -> S.Type -> Doc
+genEnumerationEnum nm tp = genEnum nm fields
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     fields = genFields tp
 
-
-genArrayArray :: S.Type -> Doc
-genArrayArray tp = genNewType nm (brackets $ elType <> semi <+> sz)
+genArrayArray :: Doc -> S.Type -> Doc
+genArrayArray nm tp = genNewType nm (brackets $ elType <> semi <+> sz)
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     td     = S.typeDesc tp
-    elType = s . cautNameToRustName . S.arrayRef $  td
+    elType = genTypeName . S.arrayRef $  td
     sz     = s . show . S.arrayLength $ td
 
-
-
-genVectorVec :: S.Type -> Doc
-genVectorVec tp = genNewType nm (genVec elType)
+genVectorVec :: Doc -> S.Type -> Doc
+genVectorVec nm tp = genNewType nm (genVec elType)
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     td     = S.typeDesc tp
-    elType = s . cautNameToRustName . S.vectorRef $  td
+    elType = genTypeName . S.vectorRef $  td
 
-
-
-genUnionEnum :: S.Type -> Doc
-genUnionEnum tp = genEnum nm fields
+genUnionEnum :: Doc -> S.Type -> Doc
+genUnionEnum nm tp = genEnum nm fields
   where
-    nm     = s . cautNameToRustName . S.typeName $ tp
     fields = genFields tp
 
-
-genSynonymNewtype :: S.Type -> Doc
-genSynonymNewtype tp = genNewType nm st
+genSynonymNewtype :: Doc -> S.Type -> Doc
+genSynonymNewtype nm tp = genNewType nm st
   where
-    nm = s . cautNameToRustName . S.typeName $ tp
     td = S.typeDesc tp
     sr = S.synonymRef td
-    st = s . cautNameToRustName $ sr
-
+    st = genTypeName sr
 
 genStructField :: S.Field -> Doc
 genStructField (S.DataField n i r) =
   s "pub" <+> nm <> colon <+> fieldType <> comma <+> comment idx
   where
     nm        = t . C.unIdentifier $  n
-    fieldType = s . cautNameToRustName $ r
+    fieldType = genTypeName r
     idx       = s . show $ i
 genStructField (S.EmptyField _ _) = empty
-
 
 genEnumField :: S.Field -> Doc
 genEnumField (S.DataField n i r) =
   nm <> parens fieldType <> comma <+> comment idx
   where
     nm        = t . titleCase . C.unIdentifier $  n
-    fieldType = s . cautNameToRustName $ r
+    fieldType = genTypeName r
     idx       = s . show $ i
 genEnumField (S.EmptyField n i) =
   nm <> comma <+> comment idx
@@ -212,19 +200,17 @@ genEnumField (S.EmptyField n i) =
     nm        = t . titleCase . C.unIdentifier $  n
     idx       = s . show $ i
 
-
 genOption :: Maybe Doc -> Doc
 genOption ot = s "Option" <> angles a
   where
    a = fromMaybe (s "()") ot
-
 
 genComboStructField :: S.Field -> Doc
 genComboStructField (S.DataField n i r) =
   s "pub" <+> nm <> colon <+> genOption fieldType <> comma <+> comment idx
   where
     nm        = t . C.unIdentifier $ n
-    fieldType = Just . s . cautNameToRustName $ r
+    fieldType = Just $ genTypeName r
     idx       = s . show $ i
 genComboStructField (S.EmptyField n i) =
   s "pub" <+> nm <> colon <+> genOption Nothing <> comma <+> comment idx
@@ -232,13 +218,11 @@ genComboStructField (S.EmptyField n i) =
     nm  = t . C.unIdentifier $ n
     idx = s . show $ i
 
-
 genEnumerationEnumField :: S.EnumVal -> Doc
 genEnumerationEnumField (S.EnumVal n i) = nm <> comma <+> comment idx
   where
     nm  = s . T.unpack . titleCase . C.unIdentifier $ n
     idx = s . show $ i
-
 
 genFields :: S.Type -> [Doc]
 genFields S.Type {S.typeDesc = td} =
@@ -250,11 +234,9 @@ genFields S.Type {S.typeDesc = td} =
     _                    -> error "How did I get here?"
 
 
-
-
------------------------
--- Cauterize `impl`s --
------------------------
+---------------------------------
+-- Cauterize `impl` generation --
+---------------------------------
 
 genImpl :: S.Type -> Doc
 genImpl tp = vcat
@@ -265,15 +247,15 @@ genImpl tp = vcat
   , rbrace
   ]
   where
-    nm = s . cautNameToRustName . S.typeName $ tp
-
+    nm = genTypeName . S.typeName $ tp
 
 genEncode :: S.Type -> Doc
-genEncode tp = vcat
-  [ s "fn encode(&self, ctx: &mut Encoder) -> Result<(), Error>" <+> lbrace
-  , indent $ genEncodeInner tp
-  , rbrace
-  ]
+genEncode tp = s "fn encode(&self, ctx: &mut Encoder) -> Result<(), Error>"
+               <+> braces
+                   ( linebreak
+                     <> indent (genEncodeInner tp)
+                     <> linebreak
+                   )
 
 genEncodeInner :: S.Type -> Doc
 genEncodeInner tp =
@@ -287,8 +269,7 @@ genEncodeInner tp =
     S.Union{}       -> s "unimplemented!();"
     S.Vector{}      -> s "unimplemented!();"
     where
-      nm = s . cautNameToRustName . S.typeName $ tp
-
+      nm = genTypeName . S.typeName $ tp
 
 genDecode :: S.Type -> Doc
 genDecode tp = vcat
@@ -296,18 +277,6 @@ genDecode tp = vcat
   , indent $ genDecodeInner tp
   , rbrace
   ]
-
-genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
-genEncodeArray nm id len = vcat
-  [ s "let ref elems = self.0;"
-  , s "for elem in elems.iter() {"
-  , indent . s $ "try!(elem.encode(ctx));"
-  , rbrace
-  , s "Ok(())"
-  ]
-  where
-    elType = s . cautNameToRustName $ id
-    sz     = s . show $ len
 
 genDecodeInner :: S.Type -> Doc
 genDecodeInner tp =
@@ -321,7 +290,7 @@ genDecodeInner tp =
     S.Union{}       -> s "unimplemented!();"
     S.Vector{}      -> s "unimplemented!();"
     where
-      nm = s . cautNameToRustName . S.typeName $ tp
+      nm = genTypeName . S.typeName $ tp
 
 genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
 genDecodeArray nm id len = vcat
@@ -334,15 +303,28 @@ genDecodeArray nm id len = vcat
   , s "Ok" <> parens (nm <> parens (s "arr"))
   ]
   where
-    elType = s . cautNameToRustName $ id
+    elType = genTypeName id
+    sz     = s . show $ len
+
+genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
+genEncodeArray nm id len = s "let ref elems = self.0;"
+                      <$$> s "for elem in elems.iter()"
+                       <+> braces
+                           ( linebreak
+                             <> indent (s "try!(elem.encode(ctx));")
+                             <> linebreak
+                           )
+                      <$$> s "Ok(())"
+  where
+    elType = genTypeName id
     sz     = s . show $ len
 
 genEncodeNewtype :: Doc -> Doc
 genEncodeNewtype nm = s "let &" <> nm <> parens (s "ref inner") <+> s "= self;"
-              <$$> genTry (s "inner.encode(ctx)") <> semi
-              <$$> genOk (parens empty)
+                 <$$> genTry (s "inner.encode(ctx)") <> semi
+                 <$$> genOk (parens empty)
 
 genDecodeNewtype :: Doc -> C.Identifier -> Doc
 genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(ctx)")))
   where
-    innerType = s . cautNameToRustName $ id
+    innerType = genTypeName id
