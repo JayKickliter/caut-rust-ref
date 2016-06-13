@@ -6,7 +6,7 @@ use std::mem;
 
 pub static SPEC_NAME: &'static str = "simple";
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Unsigned8(pub u8);
 
 impl Cauterize for Unsigned8 {
@@ -36,7 +36,7 @@ impl Cauterize for SomeRange {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum PrimitiveUnion {
     U8(u8), // 0
     U16(u16), // 1
@@ -61,7 +61,7 @@ impl Cauterize for PrimitiveUnion {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Number64(pub i64);
 
 impl Cauterize for Number64 {
@@ -76,7 +76,7 @@ impl Cauterize for Number64 {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct SomeArray(pub [Number64; 8]);
 
 impl Cauterize for SomeArray {
@@ -97,7 +97,7 @@ impl Cauterize for SomeArray {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct SomeVector(pub Vec<Number64>);
 
 impl Cauterize for SomeVector {
@@ -110,7 +110,7 @@ impl Cauterize for SomeVector {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum FieldEnum {
     Somearray, // 0
     Somevector, // 1
@@ -127,7 +127,7 @@ impl Cauterize for FieldEnum {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Header(pub Vec<FieldEnum>);
 
 impl Cauterize for Header {
@@ -140,7 +140,7 @@ impl Cauterize for Header {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Color {
     Red, // 0
     Green, // 1
@@ -157,7 +157,7 @@ impl Cauterize for Color {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct CRecord {
     pub a: i8, // 0
     pub b: i8, // 1
@@ -173,7 +173,7 @@ impl Cauterize for CRecord {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct BRecord {
     pub a: i8, // 0
     pub d: CRecord, // 1
@@ -189,7 +189,7 @@ impl Cauterize for BRecord {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ARecord {
     pub z: SomeVector, // 0
     pub a: i8, // 1
@@ -206,7 +206,7 @@ impl Cauterize for ARecord {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum AUnion {
     A(ARecord), // 0
     B(BRecord), // 1
@@ -225,7 +225,7 @@ impl Cauterize for AUnion {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ACombination {
     pub a: Option<Number64>, // 0
     pub b: Option<i8>, // 1

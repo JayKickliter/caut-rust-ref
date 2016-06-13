@@ -22,13 +22,14 @@ import qualified Text.PrettyPrint.Leijen as L
 data Attribute = Debug
                | Default
                | PartialEq
+               deriving(Show)
 instance Pretty Attribute where
   pretty Debug     = s "Debug"
   pretty Default   = s "Default"
   pretty PartialEq = s "PartialEq"
 
 genDerive :: [Attribute] -> Doc
-genDerive attrs = s "#[derive" <> parens (cat (punctuate comma (map pretty attrs))) <> rbracket
+genDerive attrs = s "#[derive" <> parens (intercalate comma (map pretty attrs)) <> rbracket
 
 s :: String -> Doc
 s = string
@@ -43,7 +44,7 @@ intercalate :: Doc -> [Doc] -> Doc
 intercalate s elems = sep (punctuate s elems)
 
 renderDoc :: Doc -> String
-renderDoc d = displayS (renderPretty 0.4 80 d) ""
+renderDoc d = displayS (renderPretty 1.0 80 d) ""
 
 genTypeName :: C.Identifier -> Doc
 genTypeName n = s . cautTypeToRustType $ n
@@ -95,14 +96,14 @@ genSource spec = renderDoc $ vcat $ punctuate empty
 
 genType :: S.Type -> Doc
 genType tp = case S.typeDesc tp of
-    S.Array{}       -> genDerive [Debug,PartialEq] <$$> genArrayArray nm tp
-    S.Combination{} -> genDerive [Debug,PartialEq] <$$> genCombinationStruct nm tp
-    S.Enumeration{} -> genDerive [Debug,PartialEq] <$$> genEnumerationEnum nm tp
+    S.Array{}       -> genDerive [Debug,Default,PartialEq] <$$> genArrayArray nm tp
+    S.Combination{} -> genDerive [Debug,PartialEq]         <$$> genCombinationStruct nm tp
+    S.Enumeration{} -> genDerive [Debug,PartialEq]         <$$> genEnumerationEnum nm tp
     S.Range{}       -> range2unimplemented nm tp
-    S.Record{}      -> genDerive [Debug,PartialEq] <$$> genRecordStruct nm tp
-    S.Synonym{}     -> genDerive [Debug,PartialEq] <$$> genSynonymNewtype nm tp
-    S.Union{}       -> genDerive [Debug,PartialEq] <$$> genUnionEnum nm tp
-    S.Vector{}      -> genDerive [Debug,PartialEq] <$$> genVectorVec nm tp
+    S.Record{}      -> genDerive [Debug,Default,PartialEq] <$$> genRecordStruct nm tp
+    S.Synonym{}     -> genDerive [Debug,Default,PartialEq] <$$> genSynonymNewtype nm tp
+    S.Union{}       -> genDerive [Debug,PartialEq]         <$$> genUnionEnum nm tp
+    S.Vector{}      -> genDerive [Debug,Default,PartialEq] <$$> genVectorVec nm tp
     where
       nm = genTypeName $ S.typeName tp
 
