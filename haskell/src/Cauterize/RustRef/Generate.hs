@@ -61,6 +61,11 @@ genTry d = s "try!" <> parens d
 genOk :: Doc -> Doc
 genOk d = s "Ok" <> parens d
 
+genRepr :: Doc -> Doc
+genRepr r = s "#[repr" <> parens r <> rbracket
+
+genTagTypeName :: C.Tag -> Doc
+genTagTypeName = s . cautTagToRustType
 
 -----------------------
 -- Source generation --
@@ -150,9 +155,12 @@ genRecordStruct nm tp = genStruct nm fields
     fields = genFields tp
 
 genEnumerationEnum :: Doc -> S.Type -> Doc
-genEnumerationEnum nm tp = genEnum nm fields
+genEnumerationEnum nm tp = genRepr tagType
+                      <$$> genEnum nm fields
   where
-    fields = genFields tp
+    fields  = genFields tp
+    td      = S.typeDesc tp
+    tagType = genTagTypeName . S.enumerationTag $  td
 
 genArrayArray :: Doc -> S.Type -> Doc
 genArrayArray nm tp = genNewType nm (brackets $ elType <> semi <+> sz)
@@ -263,7 +271,7 @@ genEncodeInner tp =
   case S.typeDesc tp of
     S.Array{..}     -> genEncodeArray nm arrayRef arrayLength
     S.Combination{} -> s "unimplemented!();"
-    S.Enumeration{} -> s "unimplemented!();"
+    S.Enumeration{} -> genEncodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> s "unimplemented!();"
     S.Synonym{..}   -> genEncodeNewtype nm
@@ -284,7 +292,7 @@ genDecodeInner tp =
   case S.typeDesc tp of
     S.Array {..}    -> genDecodeArray nm arrayRef arrayLength
     S.Combination{} -> s "unimplemented!();"
-    S.Enumeration{} -> s "unimplemented!();"
+    S.Enumeration{} -> genDecodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> s "unimplemented!();"
     S.Synonym{..}   -> genDecodeNewtype nm synonymRef
@@ -297,7 +305,7 @@ genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
 genDecodeArray nm id len = vcat
   [ s "let mut arr:" <+> brackets (elType <> semi <+> sz)
                      <+> equals
-                     <+> genUnsafe (s "mem::uninitialized()") <> semi
+                     <+> s "Default::default();"
   , s "for i in 0.." <> sz <+> lbrace
   , indent (s "arr[i] = try!" <> parens (elType <> s "::decode(ctx)") <> semi)
   , rbrace
@@ -329,3 +337,24 @@ genDecodeNewtype :: Doc -> C.Identifier -> Doc
 genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(ctx)")))
   where
     innerType = genTypeName id
+
+genEncodeEnumerationEnum :: S.Type -> Doc
+genEncodeEnumerationEnum tp = s "let tag: &" <> tagType <> s " = unsafe { mem::transmute(self) };"
+                            <$$> s "try!(tag.encode(ctx));"
+                            <$$> s "Ok(())"
+  where
+    td      = S.typeDesc tp
+    tagType = genTagTypeName . S.enumerationTag $ td
+
+genDecodeEnumerationEnum :: S.Type -> Doc
+genDecodeEnumerationEnum tp = s "let tag = " <> genTry (tagType <> s "::decode(ctx)") <> semi
+                            <$$> s "if tag > " <> maxTag <+> braces
+                               ( linebreak
+                                 <> indent (s "return Err(Error::InvalidTag);")
+                                 <> linebreak
+                               )
+                            <$$> s "Ok(unsafe { mem::transmute(tag) })"
+  where
+    td      = S.typeDesc tp
+    tagType = genTagTypeName . S.enumerationTag $ td
+    maxTag  = s . show $ ((length . S.enumerationValues $ td) - 1)

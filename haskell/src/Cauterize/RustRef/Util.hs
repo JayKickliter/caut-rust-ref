@@ -5,6 +5,7 @@ module Cauterize.RustRef.Util
   ,nonEmpty
   ,titleCase
   ,cautFieldToRustField
+  ,cautTagToRustType
   ) where
 
 
@@ -35,3 +36,10 @@ cautFieldToRustField  = T.unpack . titleCase . C.unIdentifier
 
 nonEmpty :: [T.Text] -> [T.Text]
 nonEmpty = filter (not . (T.empty ==))
+
+cautTagToRustType :: C.Tag -> String
+cautTagToRustType tag = case tag of
+  C.T1 -> "u8"
+  C.T2 -> "u16"
+  C.T4 -> "u32"
+  C.T8 -> "u64"

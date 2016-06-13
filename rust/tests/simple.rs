@@ -89,7 +89,7 @@ impl Cauterize for SomeArray {
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        let mut arr: [Number64; 8] = unsafe { mem::uninitialized() };
+        let mut arr: [Number64; 8] = Default::default();
         for i in 0..8 {
             arr[i] = try!(Number64::decode(ctx));
         }
@@ -111,6 +111,7 @@ impl Cauterize for SomeVector {
 }
 
 #[derive(Debug, PartialEq)]
+#[repr(u8)]
 pub enum FieldEnum {
     Somearray, // 0
     Somevector, // 1
@@ -119,11 +120,17 @@ pub enum FieldEnum {
 
 impl Cauterize for FieldEnum {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let tag: &u8 = unsafe { mem::transmute(self) };
+        try!(tag.encode(ctx));
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let tag = try!(u8::decode(ctx));
+        if tag > 2 {
+            return Err(Error::InvalidTag);
+        }
+        Ok(unsafe { mem::transmute(tag) })
     }
 }
 
@@ -141,6 +148,7 @@ impl Cauterize for Header {
 }
 
 #[derive(Debug, PartialEq)]
+#[repr(u8)]
 pub enum Color {
     Red, // 0
     Green, // 1
@@ -149,11 +157,17 @@ pub enum Color {
 
 impl Cauterize for Color {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let tag: &u8 = unsafe { mem::transmute(self) };
+        try!(tag.encode(ctx));
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let tag = try!(u8::decode(ctx));
+        if tag > 2 {
+            return Err(Error::InvalidTag);
+        }
+        Ok(unsafe { mem::transmute(tag) })
     }
 }
 
