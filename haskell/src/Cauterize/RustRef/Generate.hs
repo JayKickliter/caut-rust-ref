@@ -86,6 +86,9 @@ genAmp = s "&"
 genRef :: Doc -> Doc
 genRef a = genAmp <> a
 
+genStructFieldName :: C.Identifier -> Doc
+genStructFieldName = t . C.unIdentifier
+
 -----------------------
 -- Source generation --
 -----------------------
@@ -97,8 +100,7 @@ genSource :: S.Specification -> String
 genSource spec = renderDoc $ vcat $ punctuate empty
   [ s "#![allow(dead_code,unused_variables)]"
   , s "extern crate cauterize;"
-  , s "use self::cauterize::{Encoder, Decoder, Cauterize};"
-  , s "pub use self::cauterize::Error;"
+  , s "use self::cauterize::{Error, Encoder, Decoder, Cauterize};"
   , s "use std::mem;"
   , empty
   , s "pub static SPEC_NAME: &'static str =" <+> dquotes specName <> semi
@@ -292,7 +294,7 @@ genEncodeInner tp =
     S.Combination{} -> s "unimplemented!();"
     S.Enumeration{} -> genEncodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
-    S.Record{}      -> genEncodeRecordStruct nm tp
+    td@S.Record{}   -> genEncodeStruct td
     S.Synonym{..}   -> genEncodeNewtype nm
     S.Union{}       -> genEncodeEnum nm tp
     S.Vector{}      -> s "unimplemented!();"
@@ -313,7 +315,7 @@ genDecodeInner tp =
     S.Combination{} -> s "unimplemented!();"
     S.Enumeration{} -> genDecodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
-    S.Record{}      -> genDecodeRecordStruct nm tp
+    td@S.Record{}      -> genDecodeStruct nm td
     S.Synonym{..}   -> genDecodeNewtype nm synonymRef
     S.Union{}       -> genDecodeEnum nm tp
     S.Vector{}      -> s "unimplemented!();"
@@ -432,8 +434,27 @@ genDecodeEnum nm tp = s "let tag =" <+> genTry (tagType <> s "::decode(ctx)") <>
             where
               variantType = genTypeName fieldRef
 
-genEncodeRecordStruct :: Doc -> S.Type -> Doc
-genEncodeRecordStruct _ _ = s "unimplemented!();"
+genEncodeStruct :: S.TypeDesc -> Doc
+genEncodeStruct S.Record {..} = vcat (map genEncodeStructField recordFields)
+                   <$$> genOk genUnit
+  where
+    genEncodeStructField field = genTry (s "self." <> fieldName <> s ".encode(ctx)") <> semi
+      where
+        fieldName = genStructFieldName (S.fieldName field)
 
-genDecodeRecordStruct :: Doc -> S.Type -> Doc
-genDecodeRecordStruct _ _ = s "unimplemented!();"
+genDecodeStruct :: Doc -> S.TypeDesc -> Doc
+genDecodeStruct nm S.Record {..} = s "let rec =" <+> nm <+> braces
+                                   ( linebreak
+                                     <> indent (vcat (map genDecodeStructField recordFields))
+                                     <> linebreak
+                                   ) <> semi
+                                   <$$> genOk(s "rec")
+
+  where
+    genDecodeStructField S.DataField {..} =
+      genStructFieldName fieldName <> colon
+                                  <+> genTry
+                                  (genTypeName fieldRef
+                                   <> genColonColon
+                                   <> s "decode(ctx)"
+                                  ) <> comma

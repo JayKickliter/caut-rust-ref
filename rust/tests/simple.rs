@@ -1,7 +1,6 @@
 #![allow(dead_code,unused_variables)]
 extern crate cauterize;
-use self::cauterize::{Encoder, Decoder, Cauterize};
-pub use self::cauterize::Error;
+use self::cauterize::{Error, Encoder, Decoder, Cauterize};
 use std::mem;
 
 pub static SPEC_NAME: &'static str = "simple";
@@ -250,11 +249,17 @@ pub struct CRecord {
 
 impl Cauterize for CRecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        try!(self.a.encode(ctx));
+        try!(self.b.encode(ctx));
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let rec = CRecord {
+            a: try!(i8::decode(ctx)),
+            b: try!(i8::decode(ctx)),
+        };
+        Ok(rec)
     }
 }
 
@@ -266,11 +271,17 @@ pub struct BRecord {
 
 impl Cauterize for BRecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        try!(self.a.encode(ctx));
+        try!(self.d.encode(ctx));
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let rec = BRecord {
+            a: try!(i8::decode(ctx)),
+            d: try!(CRecord::decode(ctx)),
+        };
+        Ok(rec)
     }
 }
 
@@ -283,11 +294,19 @@ pub struct ARecord {
 
 impl Cauterize for ARecord {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        try!(self.z.encode(ctx));
+        try!(self.a.encode(ctx));
+        try!(self.d.encode(ctx));
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let rec = ARecord {
+            z: try!(SomeVector::decode(ctx)),
+            a: try!(i8::decode(ctx)),
+            d: try!(BRecord::decode(ctx)),
+        };
+        Ok(rec)
     }
 }
 
