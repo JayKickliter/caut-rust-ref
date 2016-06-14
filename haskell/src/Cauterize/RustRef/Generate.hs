@@ -101,6 +101,18 @@ genIf a b = s "if" <+> a <+> genBlock b
 (<::>) :: Doc -> Doc -> Doc
 (<::>) a b = a <> s "::" <> b
 
+genSome :: Doc -> Doc
+genSome a = s "Some" <> parens a
+
+genTryDecode :: Doc -> Doc
+genTryDecode a = genTry (a <> s "::decode(ctx)")
+
+genTryEncode :: Doc -> Doc
+genTryEncode a = genTry (a <> s ".encode(ctx)")
+
+genComment :: Doc -> Doc
+genComment d = s "//" <+> d
+
 
 -----------------------
 -- Source generation --
@@ -167,12 +179,9 @@ genStruct nm fields = vcat
   , rbrace
   ]
 
-comment :: Doc -> Doc
-comment d = s "//" <+> d
-
 range2unimplemented :: Doc -> S.Type -> Doc
 range2unimplemented nm tp = vcat
-  [ comment $ s "Range type not yet implemented."
+  [ genComment $ s "Range type not yet implemented."
   , genEnum nm [empty]
   ]
 
@@ -223,7 +232,7 @@ genSynonymNewtype nm tp = genNewType nm st
 
 genStructField :: S.Field -> Doc
 genStructField (S.DataField n i r) =
-  s "pub" <+> nm <> colon <+> fieldType <> comma <+> comment idx
+  s "pub" <+> nm <> colon <+> fieldType <> comma <+> genComment idx
   where
     nm        = t . C.unIdentifier $  n
     fieldType = genTypeName r
@@ -232,13 +241,13 @@ genStructField (S.EmptyField _ _) = empty
 
 genEnumField :: S.Field -> Doc
 genEnumField (S.DataField n i r) =
-  nm <> parens fieldType <> comma <+> comment idx
+  nm <> parens fieldType <> comma <+> genComment idx
   where
     nm        = t . titleCase . C.unIdentifier $  n
     fieldType = genTypeName r
     idx       = s . show $ i
 genEnumField (S.EmptyField n i) =
-  nm <> comma <+> comment idx
+  nm <> comma <+> genComment idx
   where
     nm        = t . titleCase . C.unIdentifier $  n
     idx       = s . show $ i
@@ -250,19 +259,19 @@ genOption ot = s "Option" <> angles a
 
 genComboStructField :: S.Field -> Doc
 genComboStructField (S.DataField n i r) =
-  s "pub" <+> nm <> colon <+> genOption fieldType <> comma <+> comment idx
+  s "pub" <+> nm <> colon <+> genOption fieldType <> comma <+> genComment idx
   where
     nm        = t . C.unIdentifier $ n
     fieldType = Just $ genTypeName r
     idx       = s . show $ i
 genComboStructField (S.EmptyField n i) =
-  s "pub" <+> nm <> colon <+> genOption Nothing <> comma <+> comment idx
+  s "pub" <+> nm <> colon <+> genOption Nothing <> comma <+> genComment idx
   where
     nm  = t . C.unIdentifier $ n
     idx = s . show $ i
 
 genEnumerationEnumField :: S.EnumVal -> Doc
-genEnumerationEnumField (S.EnumVal n i) = nm <> comma <+> comment idx
+genEnumerationEnumField (S.EnumVal n i) = nm <> comma <+> genComment idx
   where
     nm  = s . T.unpack . titleCase . C.unIdentifier $ n
     idx = s . show $ i
@@ -300,7 +309,7 @@ genEncodeInner :: S.Type -> Doc
 genEncodeInner tp@S.Type {..} =
   case typeDesc of
     S.Array{..}     -> genEncodeArray nm arrayRef arrayLength
-    S.Combination{} -> s "unimplemented!();"
+    S.Combination{} -> genEncodeCombinationStruct nm typeDesc
     S.Enumeration{} -> genEncodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> genEncodeStruct typeDesc
@@ -321,7 +330,7 @@ genDecodeInner :: S.Type -> Doc
 genDecodeInner tp@S.Type {..} =
   case typeDesc of
     S.Array {..}    -> genDecodeArray nm arrayRef arrayLength
-    S.Combination{} -> s "unimplemented!();"
+    S.Combination{} -> genDecodeCombinationStruct nm typeDesc
     S.Enumeration{} -> genDecodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
     S.Record{}      -> genDecodeStruct nm typeDesc
@@ -337,7 +346,7 @@ genDecodeArray nm id len = vcat
     <+> equals
     <+> s "Default::default();"
   , genFor (s "i in 0.." <> sz)
-    (s "arr[i] =" <+> genTry (elType <> s "::decode(ctx)") <> semi)
+    (s "arr[i] =" <+> genTryDecode elType <> semi)
   , genOk (nm <> parens (s "arr"))
   ]
   where
@@ -358,12 +367,12 @@ genEncodeArray nm id len = vcat
 genEncodeNewtype :: Doc -> Doc
 genEncodeNewtype nm = vcat
   [ s "let &" <> nm <> parens (s "ref inner") <+> s "= self;"
-  , genTry (s "inner.encode(ctx)") <> semi
+  , genTryEncode (s "inner") <> semi
   , genOk (parens empty)
   ]
 
 genDecodeNewtype :: Doc -> C.Identifier -> Doc
-genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(ctx)")))
+genDecodeNewtype nm id = genOk (nm <> parens (genTryDecode innerType))
   where
     innerType = genTypeName id
 
@@ -379,7 +388,7 @@ genEncodeEnumerationEnum tp = vcat
 
 genDecodeEnumerationEnum :: S.Type -> Doc
 genDecodeEnumerationEnum tp = vcat
-  [ s "let tag = " <> genTry (tagType <> s "::decode(ctx)") <> semi
+  [ s "let tag = " <> genTryDecode tagType <> semi
   , genIf (s "tag > " <> maxTag)
           (s "return Err(Error::InvalidTag);")
   , s "Ok(unsafe { mem::transmute(tag) })"
@@ -405,21 +414,21 @@ genEncodeEnum nm tp = vcat
         (pattern, exprs) = case field of
           S.EmptyField {..} -> ( genRef (nm <::> variantName)
                                , genBlock (vcat [ s "let tag:" <+> tagType <+> equals <+> idx <> semi
-                                                , genTry (s "tag.encode(ctx)") <> semi
+                                                , genTryEncode (s "tag") <> semi
                                                 ]
                                           )
                                )
           S.DataField {..}  -> (genRef (nm <::> variantName <> parens (s "ref val"))
                                , genBlock (vcat [ s "let tag:" <+> tagType <+> equals <+> idx <> semi
-                                                , genTry (s "tag.encode(ctx)") <> semi
-                                                , genTry (s "val.encode(ctx)") <> semi
+                                                , genTryEncode (s "tag") <> semi
+                                                , genTryEncode (s "val") <> semi
                                                 ]
                                           )
                                )
 
 genDecodeEnum :: Doc -> S.Type -> Doc
 genDecodeEnum nm tp = vcat
-  [ s "let tag =" <+> genTry (tagType <> s "::decode(ctx)") <> semi
+  [ s "let tag =" <+> genTryDecode tagType <> semi
   , genMatch (s "tag") matchArms
   ]
   where
@@ -431,7 +440,7 @@ genDecodeEnum nm tp = vcat
     genDecodeEnumMatchArm nm field = case field of
       S.EmptyField {..} -> (idx , genOk (nm <::> variantName) <> comma)
       S.DataField {..}  -> (idx , genOk (nm <::> variantName <> parens
-                                          (genTry ( variantType <> s "::decode(ctx)"))
+                                          (genTryDecode variantType)
                                         ) <> comma
                            )
       where
@@ -443,7 +452,7 @@ genEncodeStruct :: S.TypeDesc -> Doc
 genEncodeStruct S.Record {..} = vcat (map genEncodeStructField recordFields)
                                 <$$> genOk genUnit
   where
-    genEncodeStructField field = genTry (s "self." <> fieldName <> s ".encode(ctx)") <> semi
+    genEncodeStructField field = genTryEncode (s "self." <> fieldName) <> semi
       where
         fieldName = genStructFieldName (S.fieldName field)
 
@@ -454,16 +463,16 @@ genDecodeStruct nm S.Record {..} = vcat
   ]
   where
     decField S.DataField {..} = genStructFieldName fieldName <> colon
-                            <+> genTry (genTypeName fieldRef <::> s "decode(ctx)") <> comma
+                            <+> genTryDecode (genTypeName fieldRef) <> comma
 
 genEncodeVec :: Doc -> S.TypeDesc -> Doc
 genEncodeVec nm S.Vector {..} = vcat
   [ s "let len = self.0.len();"
   , genIf (s "len >=" <+> maxLen)
           (s "return Err(Error::ElementCount);")
-  , genTry (parens (s "len as" <+> tagType) <> s ".encode(ctx)") <> semi
+  , genTryEncode (parens (s "len as" <+> tagType)) <> semi
   , genFor (s "elem in self.0.iter()")
-           (s "try!(elem.encode(ctx));")
+           (genTryEncode (s "elem"))
   , genOk genUnit
   ]
   where
@@ -486,3 +495,55 @@ genDecodeVec nm S.Vector {..} = vcat
     tagType = genTagTypeName vectorTag
     maxLen = s . show $ vectorLength
     elType = genTypeName vectorRef
+
+genEncodeCombinationStruct :: Doc -> S.TypeDesc -> Doc
+genEncodeCombinationStruct nm S.Combination {..} = vcat
+  [ s "let mut tag:" <+> tagType <+> s "= 0;"
+  , vcat $ map encBitField combinationFields
+  , genTryEncode (s "tag") <> semi
+  , vcat $ map encField combinationFields
+  , genOk genUnit
+  ]
+  where
+    tagType = genTagTypeName combinationTag
+    encBitField field =
+        s "tag |=" <+> parens (s "self." <> fName <> s ".is_some() as" <+> tagType) <+> s "<<" <+> fIdx <> semi
+      where
+        fIdx  = s . show $ S.fieldIndex field
+        fName = genStructFieldName $ S.fieldName field
+
+    encField field = case field of
+      S.DataField {..} -> genMatch (s "self." <> fName)
+                          [ (genSome (s "ref a"), genTryEncode (s "a") <> comma)
+                          , (s "None", s "()"  <> comma)
+                          ]
+      _ -> genComment (s "No data for field" <+> fName)
+      where
+        fName = genStructFieldName $ S.fieldName field
+
+genDecodeCombinationStruct :: Doc -> S.TypeDesc -> Doc
+genDecodeCombinationStruct nm S.Combination {..} = vcat
+  [ s "let tag =" <+> genTryDecode tagType <> semi
+  , s "let combo =" <+> nm <+> genBlock (vcat (map decField combinationFields))
+    <> semi
+  , genOk (s "combo")
+  ]
+  where
+    tagType = genTagTypeName combinationTag
+    decField field = case field of
+      S.EmptyField {..} ->
+        fName <> colon
+        <+> genMatch (s "tag &" <+> parens(s "1 <<" <+> fIdx) <+> s "== 0")
+                     [ (s "true",  s "None"  <> comma)
+                     , (s "false", genSome genUnit <> comma)
+                     ] <> comma
+
+      S.DataField {..} ->
+        fName <> colon
+        <+> genMatch (s "tag &" <+> parens(s "1 <<" <+> fIdx) <+> s "== 0")
+                     [ (s "true",  s "None"  <> comma)
+                     , (s "false", genSome (genTry $ genTypeName fieldRef <::> s "decode(ctx)") <> comma)
+                     ] <> comma
+      where
+        fIdx  = s . show $ S.fieldIndex field
+        fName = genStructFieldName $ S.fieldName field

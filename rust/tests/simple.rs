@@ -178,7 +178,7 @@ impl Cauterize for SomeVector {
         }
         try!((len as u8).encode(ctx));
         for elem in self.0.iter() {
-            try!(elem.encode(ctx));
+            try!(elem.encode(ctx))
         }
         Ok(())
     }
@@ -231,7 +231,7 @@ impl Cauterize for Header {
         }
         try!((len as u8).encode(ctx));
         for elem in self.0.iter() {
-            try!(elem.encode(ctx));
+            try!(elem.encode(ctx))
         }
         Ok(())
     }
@@ -405,11 +405,49 @@ pub struct ACombination {
 
 impl Cauterize for ACombination {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let mut tag: u8 = 0;
+        tag |= (self.a.is_some() as u8) << 0;
+        tag |= (self.b.is_some() as u8) << 1;
+        tag |= (self.c.is_some() as u8) << 2;
+        tag |= (self.d.is_some() as u8) << 3;
+        try!(tag.encode(ctx));
+        match self.a {
+            Some(ref a) => try!(a.encode(ctx)),
+            None => (),
+        }
+        match self.b {
+            Some(ref a) => try!(a.encode(ctx)),
+            None => (),
+        }
+        match self.c {
+            Some(ref a) => try!(a.encode(ctx)),
+            None => (),
+        }
+        // No data for field d
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let tag = try!(u8::decode(ctx));
+        let combo = ACombination {
+            a: match tag & (1 << 0) == 0 {
+                true => None,
+                false => Some(try!(Number64::decode(ctx))),
+            },
+            b: match tag & (1 << 1) == 0 {
+                true => None,
+                false => Some(try!(i8::decode(ctx))),
+            },
+            c: match tag & (1 << 2) == 0 {
+                true => None,
+                false => Some(try!(AUnion::decode(ctx))),
+            },
+            d: match tag & (1 << 3) == 0 {
+                true => None,
+                false => Some(()),
+            },
+        };
+        Ok(combo)
     }
 }
 
