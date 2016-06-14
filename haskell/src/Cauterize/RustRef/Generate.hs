@@ -70,15 +70,11 @@ genTagTypeName = s . cautTagToRustType
 genUnit :: Doc
 genUnit = s "()"
 
-genMatch :: Doc -> Doc -> Doc
-genMatch pat stmts = pat <+> s "=>" <+> braces
-                     ( linebreak
-                    <> indent stmts
-                    <> linebreak
-                     )
-
-genColonColon :: Doc
-genColonColon = s "::"
+genMatch :: Doc -> [(Doc,Doc)] -> Doc
+genMatch a bs = s "match" <+> a <+> genBlock exprs
+  where
+    matchArm (l,r) = fill 2 l <+> s "=>" <+> r
+    exprs = vcat (map matchArm bs)
 
 genAmp :: Doc
 genAmp = s "&"
@@ -95,6 +91,16 @@ genBlock a = braces
              <> indent a
              <> linebreak
              )
+
+genFor :: Doc -> Doc -> Doc
+genFor a b = s "for" <+> a <+> genBlock b
+
+genIf :: Doc -> Doc -> Doc
+genIf a b = s "if" <+> a <+> genBlock b
+
+(<::>) :: Doc -> Doc -> Doc
+(<::>) a b = a <> s "::" <> b
+
 
 -----------------------
 -- Source generation --
@@ -144,21 +150,19 @@ genVec :: Doc -> Doc
 genVec d = s "Vec" <> angles d
 
 genNewType :: Doc -> Doc -> Doc
-genNewType nm tp = s "pub struct"
-            <+> nm
-            <>  parens (s "pub" <+> tp)
-            <>  semi
+genNewType nm tp =
+  s "pub struct" <+> nm <>  parens (s "pub" <+> tp) <>  semi
 
 genEnum :: Doc -> [Doc] -> Doc
 genEnum nm fields = vcat
-  [s "pub enum" <+> nm <+> lbrace
+  [ s "pub enum" <+> nm <+> lbrace
   , indent (vcat fields)
   , rbrace
   ]
 
 genStruct :: Doc -> [Doc] -> Doc
 genStruct nm fields = vcat
-  [s "pub struct" <+> nm <+> lbrace
+  [ s "pub struct" <+> nm <+> lbrace
   , indent (vcat fields)
   , rbrace
   ]
@@ -183,8 +187,10 @@ genRecordStruct nm tp = genStruct nm fields
     fields = genFields tp
 
 genEnumerationEnum :: Doc -> S.Type -> Doc
-genEnumerationEnum nm tp = genRepr tagType
-                      <$$> genEnum nm fields
+genEnumerationEnum nm tp = vcat
+  [ genRepr tagType
+  , genEnum nm fields
+  ]
   where
     fields  = genFields tp
     td      = S.typeDesc tp
@@ -288,11 +294,7 @@ genImpl tp = vcat
 
 genEncode :: S.Type -> Doc
 genEncode tp = s "fn encode(&self, ctx: &mut Encoder) -> Result<(), Error>"
-               <+> braces
-                   ( linebreak
-                     <> indent (genEncodeInner tp)
-                     <> linebreak
-                   )
+           <+> genBlock (genEncodeInner tp)
 
 genEncodeInner :: S.Type -> Doc
 genEncodeInner tp@S.Type {..} =
@@ -309,11 +311,11 @@ genEncodeInner tp@S.Type {..} =
       nm = genTypeName typeName
 
 genDecode :: S.Type -> Doc
-genDecode tp = vcat
-  [ s "fn decode(ctx: &mut Decoder) -> Result<Self, Error>" <+> lbrace
-  , indent $ genDecodeInner tp
-  , rbrace
-  ]
+genDecode tp =
+  vcat [ s "fn decode(ctx: &mut Decoder) -> Result<Self, Error>" <+> lbrace
+       , indent $ genDecodeInner tp
+       , rbrace
+       ]
 
 genDecodeInner :: S.Type -> Doc
 genDecodeInner tp@S.Type {..} =
@@ -332,34 +334,33 @@ genDecodeInner tp@S.Type {..} =
 genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
 genDecodeArray nm id len = vcat
   [ s "let mut arr:" <+> brackets (elType <> semi <+> sz)
-                     <+> equals
-                     <+> s "Default::default();"
-  , s "for i in 0.." <> sz <+> lbrace
-  , indent (s "arr[i] = try!" <> parens (elType <> s "::decode(ctx)") <> semi)
-  , rbrace
-  , s "Ok" <> parens (nm <> parens (s "arr"))
+    <+> equals
+    <+> s "Default::default();"
+  , genFor (s "i in 0.." <> sz)
+    (s "arr[i] =" <+> genTry (elType <> s "::decode(ctx)") <> semi)
+  , genOk (nm <> parens (s "arr"))
   ]
   where
     elType = genTypeName id
     sz     = s . show $ len
 
 genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
-genEncodeArray nm id len = s "let ref elems = self.0;"
-                      <$$> s "for elem in elems.iter()"
-                       <+> braces
-                           ( linebreak
-                             <> indent (s "try!(elem.encode(ctx));")
-                             <> linebreak
-                           )
-                      <$$> s "Ok(())"
+genEncodeArray nm id len = vcat
+  [ s "let ref elems = self.0;"
+  , genFor (s "elem in elems.iter()")
+           (s "try!(elem.encode(ctx));")
+  , genOk genUnit
+  ]
   where
     elType = genTypeName id
     sz     = s . show $ len
 
 genEncodeNewtype :: Doc -> Doc
-genEncodeNewtype nm = s "let &" <> nm <> parens (s "ref inner") <+> s "= self;"
-                 <$$> genTry (s "inner.encode(ctx)") <> semi
-                 <$$> genOk (parens empty)
+genEncodeNewtype nm = vcat
+  [ s "let &" <> nm <> parens (s "ref inner") <+> s "= self;"
+  , genTry (s "inner.encode(ctx)") <> semi
+  , genOk (parens empty)
+  ]
 
 genDecodeNewtype :: Doc -> C.Identifier -> Doc
 genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(ctx)")))
@@ -367,119 +368,104 @@ genDecodeNewtype nm id = genOk (nm <> parens (genTry (innerType <> s "::decode(c
     innerType = genTypeName id
 
 genEncodeEnumerationEnum :: S.Type -> Doc
-genEncodeEnumerationEnum tp = s "let tag: &" <> tagType <> s " = unsafe { mem::transmute(self) };"
-                            <$$> s "try!(tag.encode(ctx));"
-                            <$$> s "Ok(())"
+genEncodeEnumerationEnum tp = vcat
+  [ s "let tag: &" <> tagType <+> s "= unsafe { mem::transmute(self) };"
+  , s "try!(tag.encode(ctx));"
+  , genOk genUnit
+  ]
   where
     td      = S.typeDesc tp
     tagType = genTagTypeName . S.enumerationTag $ td
 
 genDecodeEnumerationEnum :: S.Type -> Doc
-genDecodeEnumerationEnum tp = s "let tag = " <> genTry (tagType <> s "::decode(ctx)") <> semi
-                            <$$> s "if tag > " <> maxTag <+> braces
-                               ( linebreak
-                                 <> indent (s "return Err(Error::InvalidTag);")
-                                 <> linebreak
-                               )
-                            <$$> s "Ok(unsafe { mem::transmute(tag) })"
+genDecodeEnumerationEnum tp = vcat
+  [ s "let tag = " <> genTry (tagType <> s "::decode(ctx)") <> semi
+  , genIf (s "tag > " <> maxTag)
+          (s "return Err(Error::InvalidTag);")
+  , s "Ok(unsafe { mem::transmute(tag) })"
+  ]
   where
     td      = S.typeDesc tp
     tagType = genTagTypeName . S.enumerationTag $ td
     maxTag  = s . show $ ((length . S.enumerationValues $ td) - 1)
 
 genEncodeEnum :: Doc -> S.Type -> Doc
-genEncodeEnum nm tp = s "match self" <+> braces
-                       ( linebreak
-                         <> indent (vcat (map (genEncodeEnumMatchArm nm) (S.unionFields td)))
-                         <> linebreak
-                       ) <> semi
-                  <$$> genOk genUnit
+genEncodeEnum nm tp = vcat
+  [ genMatch (s "self") (map (genEncodeEnumMatchArm nm) (S.unionFields td)) <> semi
+  , genOk genUnit
+  ]
   where
     td = S.typeDesc tp
     tagType = genTagTypeName . S.unionTag $ td
-    genEncodeEnumMatchArm :: Doc -> S.Field -> Doc
-    genEncodeEnumMatchArm nm field = genMatch pattern statements
+    genEncodeEnumMatchArm :: Doc -> S.Field -> (Doc,Doc)
+    genEncodeEnumMatchArm nm field = (pattern, exprs)
       where
         variantName = genFieldName (S.fieldName field)
         idx = s (show (S.fieldIndex field))
-        (pattern, statements) = case field of
-          S.EmptyField {..} -> ( genRef (nm <> genColonColon <> variantName)
-                               , s "let tag:" <+> tagType <+> equals <+> idx <> semi <$$>
-                                 genTry (s "tag.encode(ctx)") <> semi
+        (pattern, exprs) = case field of
+          S.EmptyField {..} -> ( genRef (nm <::> variantName)
+                               , genBlock (vcat [ s "let tag:" <+> tagType <+> equals <+> idx <> semi
+                                                , genTry (s "tag.encode(ctx)") <> semi
+                                                ]
+                                          )
                                )
-          S.DataField {..}  -> ( genRef (nm <> genColonColon <> variantName <> parens (s "ref val"))
-                               , s "let tag:" <+> tagType <+> equals <+> idx <> semi
-                                 <$$> genTry (s "tag.encode(ctx)") <> semi
-                                 <$$> genTry (s "val.encode(ctx)") <> semi
+          S.DataField {..}  -> (genRef (nm <::> variantName <> parens (s "ref val"))
+                               , genBlock (vcat [ s "let tag:" <+> tagType <+> equals <+> idx <> semi
+                                                , genTry (s "tag.encode(ctx)") <> semi
+                                                , genTry (s "val.encode(ctx)") <> semi
+                                                ]
+                                          )
                                )
 
 genDecodeEnum :: Doc -> S.Type -> Doc
-genDecodeEnum nm tp = s "let tag =" <+> genTry (tagType <> s "::decode(ctx)") <> semi
-                  <$$> s "match tag" <+> braces
-                       ( linebreak
-                      <> indent
-                         ( vcat (map (genDecodeEnumMatchArm nm) (S.unionFields td))
-                           <$$> s "_" <+> s "=>"  <+> s "Err(Error::InvalidTag),"
-                         )
-                      <> linebreak
-                       )
+genDecodeEnum nm tp = vcat
+  [ s "let tag =" <+> genTry (tagType <> s "::decode(ctx)") <> semi
+  , genMatch (s "tag") matchArms
+  ]
   where
     td = S.typeDesc tp
     tagType = genTagTypeName . S.unionTag $ td
-
-    genDecodeEnumMatchArm :: Doc -> S.Field -> Doc
-    genDecodeEnumMatchArm nm field = pattern <+> s "=>" <+> statements <> comma
+    matchArms = map (genDecodeEnumMatchArm nm) (S.unionFields td)
+                ++ [(s "_", s "Err(Error::InvalidTag),")]
+    genDecodeEnumMatchArm :: Doc -> S.Field -> (Doc,Doc)
+    genDecodeEnumMatchArm nm field = case field of
+      S.EmptyField {..} -> (idx , genOk (nm <::> variantName) <> comma)
+      S.DataField {..}  -> (idx , genOk (nm <::> variantName <> parens
+                                          (genTry ( variantType <> s "::decode(ctx)"))
+                                        ) <> comma
+                           )
       where
+        variantType = genTypeName (S.fieldRef field)
         variantName = genFieldName (S.fieldName field)
         idx = s (show (S.fieldIndex field))
-        (pattern, statements) = case field of
-          S.EmptyField {..} -> (idx , genOk (nm <> genColonColon <> variantName))
-          S.DataField {..}  -> (idx , genOk (nm <> genColonColon <> variantName <> parens
-                                             (genTry ( variantType <> s "::decode(ctx)"))
-                                            )
-                               )
-            where
-              variantType = genTypeName fieldRef
 
 genEncodeStruct :: S.TypeDesc -> Doc
 genEncodeStruct S.Record {..} = vcat (map genEncodeStructField recordFields)
-                   <$$> genOk genUnit
+                                <$$> genOk genUnit
   where
     genEncodeStructField field = genTry (s "self." <> fieldName <> s ".encode(ctx)") <> semi
       where
         fieldName = genStructFieldName (S.fieldName field)
 
 genDecodeStruct :: Doc -> S.TypeDesc -> Doc
-genDecodeStruct nm S.Record {..} = s "let rec =" <+> nm <+> braces
-                                   ( linebreak
-                                     <> indent (vcat (map genDecodeStructField recordFields))
-                                     <> linebreak
-                                   ) <> semi
-                                   <$$> genOk(s "rec")
-
+genDecodeStruct nm S.Record {..} = vcat
+  [ s "let rec =" <+> nm <+> genBlock (vcat (map decField recordFields)) <> semi
+  , genOk(s "rec")
+  ]
   where
-    genDecodeStructField S.DataField {..} = genStructFieldName fieldName <> colon
-                                            <+> genTry
-                                            (genTypeName fieldRef
-                                             <> genColonColon
-                                             <> s "decode(ctx)"
-                                            ) <> comma
+    decField S.DataField {..} = genStructFieldName fieldName <> colon
+                            <+> genTry (genTypeName fieldRef <::> s "decode(ctx)") <> comma
 
 genEncodeVec :: Doc -> S.TypeDesc -> Doc
-genEncodeVec nm S.Vector {..} = s "let len = self.0.len();"
-                                <$$> s "if len >=" <+> maxLen <+> braces
-                                (linebreak
-                                  <> indent (s "return Err(Error::ElementCount);")
-                                  <> linebreak
-                                )
-                                <$$> genTry (parens (s "len as" <+> tagType) <> s ".encode(ctx)") <> semi
-                                <$$> s "for elem in self.0.iter()"
-                                <+> braces
-                                (linebreak
-                                  <> indent (s "try!(elem.encode(ctx));")
-                                  <> linebreak
-                                )
-                                <$$> s "Ok(())"
+genEncodeVec nm S.Vector {..} = vcat
+  [ s "let len = self.0.len();"
+  , genIf (s "len >=" <+> maxLen)
+          (s "return Err(Error::ElementCount);")
+  , genTry (parens (s "len as" <+> tagType) <> s ".encode(ctx)") <> semi
+  , genFor (s "elem in self.0.iter()")
+           (s "try!(elem.encode(ctx));")
+  , genOk genUnit
+  ]
   where
     tagType = genTagTypeName vectorTag
     maxLen = s . show $ vectorLength
@@ -487,12 +473,15 @@ genEncodeVec nm S.Vector {..} = s "let len = self.0.len();"
 
 
 genDecodeVec :: Doc -> S.TypeDesc -> Doc
-genDecodeVec nm S.Vector {..} = s "let len =" <+> genTry (tagType <> s "::decode(ctx)") <+> s "as usize;"
-                                <$$> s "if len >=" <+> maxLen <+> genBlock (s "return Err(Error::ElementCount);")
-                                <$$> s "let mut v: Vec" <> angles elType <+> s "= Vec::with_capacity(len);"
-                                <$$> s "for _ in 0..len" <+> genBlock
-                                (s "v.push" <> parens (genTry (elType <> s "::decode(ctx)")) <> semi)
-                                <$$> genOk (nm <> parens (s "v"))
+genDecodeVec nm S.Vector {..} = vcat
+  [ s "let len =" <+> genTry (tagType <> s "::decode(ctx)") <+> s "as usize;"
+  , genIf (s "len >=" <+> maxLen)
+          (s "return Err(Error::ElementCount);")
+  , s "let mut v: Vec" <> angles elType <+> s "= Vec::with_capacity(len);"
+  , genFor (s "_ in 0..len")
+           (s "v.push" <> parens (genTry (elType <> s "::decode(ctx)")) <> semi)
+  , genOk (nm <> parens (s "v"))
+  ]
   where
     tagType = genTagTypeName vectorTag
     maxLen = s . show $ vectorLength

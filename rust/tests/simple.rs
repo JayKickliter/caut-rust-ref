@@ -115,18 +115,18 @@ impl Cauterize for PrimitiveUnion {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let tag = try!(u8::decode(ctx));
         match tag {
-            0 => Ok(PrimitiveUnion::U8(try!(u8::decode(ctx)))),
-            1 => Ok(PrimitiveUnion::U16(try!(u16::decode(ctx)))),
-            2 => Ok(PrimitiveUnion::U32(try!(u32::decode(ctx)))),
-            3 => Ok(PrimitiveUnion::U64(try!(u64::decode(ctx)))),
-            4 => Ok(PrimitiveUnion::S8(try!(i8::decode(ctx)))),
-            5 => Ok(PrimitiveUnion::S16(try!(i16::decode(ctx)))),
-            6 => Ok(PrimitiveUnion::S32(try!(i32::decode(ctx)))),
-            7 => Ok(PrimitiveUnion::S64(try!(i64::decode(ctx)))),
-            8 => Ok(PrimitiveUnion::Bool(try!(bool::decode(ctx)))),
-            9 => Ok(PrimitiveUnion::F32(try!(f32::decode(ctx)))),
+            0  => Ok(PrimitiveUnion::U8(try!(u8::decode(ctx)))),
+            1  => Ok(PrimitiveUnion::U16(try!(u16::decode(ctx)))),
+            2  => Ok(PrimitiveUnion::U32(try!(u32::decode(ctx)))),
+            3  => Ok(PrimitiveUnion::U64(try!(u64::decode(ctx)))),
+            4  => Ok(PrimitiveUnion::S8(try!(i8::decode(ctx)))),
+            5  => Ok(PrimitiveUnion::S16(try!(i16::decode(ctx)))),
+            6  => Ok(PrimitiveUnion::S32(try!(i32::decode(ctx)))),
+            7  => Ok(PrimitiveUnion::S64(try!(i64::decode(ctx)))),
+            8  => Ok(PrimitiveUnion::Bool(try!(bool::decode(ctx)))),
+            9  => Ok(PrimitiveUnion::F32(try!(f32::decode(ctx)))),
             10 => Ok(PrimitiveUnion::F64(try!(f64::decode(ctx)))),
-            _ => Err(Error::InvalidTag),
+            _  => Err(Error::InvalidTag),
         }
     }
 }
@@ -385,12 +385,12 @@ impl Cauterize for AUnion {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let tag = try!(u8::decode(ctx));
         match tag {
-            0 => Ok(AUnion::A(try!(ARecord::decode(ctx)))),
-            1 => Ok(AUnion::B(try!(BRecord::decode(ctx)))),
-            2 => Ok(AUnion::C(try!(i8::decode(ctx)))),
-            3 => Ok(AUnion::D(try!(Number64::decode(ctx)))),
-            4 => Ok(AUnion::E),
-            _ => Err(Error::InvalidTag),
+            0  => Ok(AUnion::A(try!(ARecord::decode(ctx)))),
+            1  => Ok(AUnion::B(try!(BRecord::decode(ctx)))),
+            2  => Ok(AUnion::C(try!(i8::decode(ctx)))),
+            3  => Ok(AUnion::D(try!(Number64::decode(ctx)))),
+            4  => Ok(AUnion::E),
+            _  => Err(Error::InvalidTag),
         }
     }
 }
