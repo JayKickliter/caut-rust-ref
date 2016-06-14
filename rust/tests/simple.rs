@@ -172,11 +172,27 @@ pub struct SomeVector(pub Vec<Number64>);
 
 impl Cauterize for SomeVector {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let len = self.0.len();
+        if len >= 8 {
+            return Err(Error::ElementCount);
+        }
+        try!((len as u8).encode(ctx));
+        for elem in self.0.iter() {
+            try!(elem.encode(ctx));
+        }
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let len = try!(u8::decode(ctx)) as usize;
+        if len >= 8 {
+            return Err(Error::ElementCount);
+        }
+        let mut v: Vec<Number64> = Vec::with_capacity(len);
+        for _ in 0..len {
+            v.push(try!(Number64::decode(ctx)));
+        }
+        Ok(SomeVector(v))
     }
 }
 
@@ -209,11 +225,27 @@ pub struct Header(pub Vec<FieldEnum>);
 
 impl Cauterize for Header {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        unimplemented!();
+        let len = self.0.len();
+        if len >= 4 {
+            return Err(Error::ElementCount);
+        }
+        try!((len as u8).encode(ctx));
+        for elem in self.0.iter() {
+            try!(elem.encode(ctx));
+        }
+        Ok(())
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        unimplemented!();
+        let len = try!(u8::decode(ctx)) as usize;
+        if len >= 4 {
+            return Err(Error::ElementCount);
+        }
+        let mut v: Vec<FieldEnum> = Vec::with_capacity(len);
+        for _ in 0..len {
+            v.push(try!(FieldEnum::decode(ctx)));
+        }
+        Ok(Header(v))
     }
 }
 

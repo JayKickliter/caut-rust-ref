@@ -8,6 +8,7 @@ pub enum Error {
     Decode,
     InvalidTag,
     InvalidValue,
+    ElementCount,
 }
 
 type CautEndian = LittleEndian;
