@@ -1,3 +1,5 @@
+#![cfg_attr(test, feature(plugin))]
+#![cfg_attr(test, plugin(quickcheck_macros))]
 extern crate byteorder;
 use std::io::{Write, Read, Cursor};
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
@@ -225,59 +227,135 @@ impl Cauterize for bool {
     }
 }
 
+#[cfg(test)]
+extern crate quickcheck;
 
-#[test]
-fn test_primitives() {
-    // Create encode buffer and context
-    let buf: Vec<u8> = Vec::new();
-    let mut ectx = Encoder::new(buf);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::*;
 
-    // Encode values
-    let enc_u8 = 1 as u8;
-    let enc_i8 = -1 as i8;
-    let enc_u16 = 2 as u16;
-    let enc_i16 = -2 as i16;
-    let enc_u32 = 3 as u32;
-    let enc_i32 = -3 as i32;
-    let enc_u64 = 4 as u64;
-    let enc_i64 = -4 as i64;
-    let enc_f32 = 5.0 as f32;
-    let enc_f64 = -5.0 as f64;
+    #[derive(Clone,Debug,PartialEq)]
+    enum CautPrim {
+        U8(u8),
+        I8(i8),
+        U16(u16),
+        I16(i16),
+        U32(u32),
+        I32(i32),
+        U64(u64),
+        I64(i64),
+        F32(f32),
+        F64(f64),
+    }
 
-    enc_u8.encode(&mut ectx).unwrap();
-    enc_i8.encode(&mut ectx).unwrap();
-    enc_u16.encode(&mut ectx).unwrap();
-    enc_i16.encode(&mut ectx).unwrap();
-    enc_u32.encode(&mut ectx).unwrap();
-    enc_i32.encode(&mut ectx).unwrap();
-    enc_u64.encode(&mut ectx).unwrap();
-    enc_i64.encode(&mut ectx).unwrap();
-    enc_f32.encode(&mut ectx).unwrap();
-    enc_f64.encode(&mut ectx).unwrap();
+    impl Cauterize for CautPrim {
+        fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+            let tag = try!(u8::decode(ctx));
+            match tag {
+                0 => Ok(CautPrim::U8(try!(u8::decode(ctx)))),
+                1 => Ok(CautPrim::I8(try!(i8::decode(ctx)))),
+                2 => Ok(CautPrim::U16(try!(u16::decode(ctx)))),
+                3 => Ok(CautPrim::I16(try!(i16::decode(ctx)))),
+                4 => Ok(CautPrim::U32(try!(u32::decode(ctx)))),
+                5 => Ok(CautPrim::I32(try!(i32::decode(ctx)))),
+                6 => Ok(CautPrim::U64(try!(u64::decode(ctx)))),
+                7 => Ok(CautPrim::I64(try!(i64::decode(ctx)))),
+                8 => Ok(CautPrim::F32(try!(f32::decode(ctx)))),
+                9 => Ok(CautPrim::F64(try!(f64::decode(ctx)))),
+                _ => Err(Error::InvalidTag),
+            }
+        }
 
-    // Get the enc buffer back and resuse it for decoding
-    let buf = ectx.consume();
-    let mut dctx = Decoder::new(buf);
+        fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+            match self {
+                &CautPrim::U8(ref val) => {
+                    let tag: u8 = 0;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::I8(ref val) => {
+                    let tag: u8 = 1;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::U16(ref val) => {
+                    let tag: u8 = 2;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::I16(ref val) => {
+                    let tag: u8 = 3;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::U32(ref val) => {
+                    let tag: u8 = 4;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::I32(ref val) => {
+                    let tag: u8 = 5;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::U64(ref val) => {
+                    let tag: u8 = 6;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::I64(ref val) => {
+                    let tag: u8 = 7;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::F32(ref val) => {
+                    let tag: u8 = 8;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+                &CautPrim::F64(ref val) => {
+                    let tag: u8 = 9;
+                    try!(tag.encode(ctx));
+                    try!(val.encode(ctx));
+                }
+            };
+            Ok(())
+        }
+    }
 
-    let dec_u8 = u8::decode(&mut dctx).unwrap();
-    let dec_i8 = i8::decode(&mut dctx).unwrap();
-    let dec_u16 = u16::decode(&mut dctx).unwrap();
-    let dec_i16 = i16::decode(&mut dctx).unwrap();
-    let dec_u32 = u32::decode(&mut dctx).unwrap();
-    let dec_i32 = i32::decode(&mut dctx).unwrap();
-    let dec_u64 = u64::decode(&mut dctx).unwrap();
-    let dec_i64 = i64::decode(&mut dctx).unwrap();
-    let dec_f32 = f32::decode(&mut dctx).unwrap();
-    let dec_f64 = f64::decode(&mut dctx).unwrap();
+    impl Arbitrary for CautPrim {
+        fn arbitrary<G: Gen>(g: &mut G) -> CautPrim {
+            let arm = g.gen::<usize>() % 10;
+            match arm {
+                0 => CautPrim::U8(g.gen()),
+                1 => CautPrim::I8(g.gen()),
+                2 => CautPrim::U16(g.gen()),
+                3 => CautPrim::I16(g.gen()),
+                4 => CautPrim::U32(g.gen()),
+                5 => CautPrim::I32(g.gen()),
+                6 => CautPrim::U64(g.gen()),
+                7 => CautPrim::I64(g.gen()),
+                8 => CautPrim::F32(g.gen()),
+                _ => CautPrim::F64(g.gen()),
+            }
+        }
+    }
 
-    assert!(dec_u8 == enc_u8);
-    assert!(dec_i8 == enc_i8);
-    assert!(dec_u16 == enc_u16);
-    assert!(dec_i16 == enc_i16);
-    assert!(dec_u32 == enc_u32);
-    assert!(dec_i32 == enc_i32);
-    assert!(dec_u64 == enc_u64);
-    assert!(dec_i64 == enc_i64);
-    assert!(dec_f32 == enc_f32);
-    assert!(dec_f64 == enc_f64);
+    #[quickcheck]
+    fn caut_prim_round_trip(items: Vec<CautPrim>) -> bool {
+        let buf: Vec<u8> = Vec::new();
+        let mut ctx = Encoder::new(buf);
+        for item in &items {
+            item.encode(&mut ctx).unwrap();
+        }
+
+        let buf = ctx.consume();
+        let mut ctx = Decoder::new(buf);
+        let mut decoded: Vec<CautPrim> = Vec::new();
+        for _ in 0..items.len() {
+            &decoded.push(CautPrim::decode(&mut ctx).unwrap());
+        }
+        decoded == items
+    }
 }

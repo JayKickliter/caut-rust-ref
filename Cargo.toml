@@ -17,3 +17,7 @@ path = "rust/tests/test_manual.rs"
 
 [dependencies]
 byteorder = "0.5"
+
+[dev-dependencies]
+quickcheck = "0.2"
+quickcheck_macros = "0.2"
