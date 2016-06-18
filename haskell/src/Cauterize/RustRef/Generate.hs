@@ -41,7 +41,7 @@ indent :: Doc -> Doc
 indent = L.indent 4
 
 intercalate :: Doc -> [Doc] -> Doc
-intercalate s elems = sep (punctuate s elems)
+intercalate seperator elems = sep (punctuate seperator elems)
 
 renderDoc :: Doc -> String
 renderDoc d = displayS (renderPretty 1.0 80 d) ""
@@ -308,7 +308,7 @@ genEncode tp = s "fn encode(&self, ctx: &mut Encoder) -> Result<(), Error>"
 genEncodeInner :: S.Type -> Doc
 genEncodeInner tp@S.Type {..} =
   case typeDesc of
-    S.Array{..}     -> genEncodeArray nm arrayRef arrayLength
+    S.Array{}       -> genEncodeArray
     S.Combination{} -> genEncodeCombinationStruct nm typeDesc
     S.Enumeration{} -> genEncodeEnumerationEnum tp
     S.Range{}       -> s "unimplemented!();"
@@ -341,7 +341,7 @@ genDecodeInner tp@S.Type {..} =
       nm = genTypeName typeName
 
 genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
-genDecodeArray nm id len = vcat
+genDecodeArray nm ident len = vcat
   [ s "let mut arr:" <+> brackets (elType <> semi <+> sz)
     <+> equals
     <+> s "Default::default();"
@@ -350,19 +350,16 @@ genDecodeArray nm id len = vcat
   , genOk (nm <> parens (s "arr"))
   ]
   where
-    elType = genTypeName id
+    elType = genTypeName ident
     sz     = s . show $ len
 
-genEncodeArray :: Doc -> C.Identifier -> C.Length -> Doc
-genEncodeArray nm id len = vcat
+genEncodeArray :: Doc
+genEncodeArray = vcat
   [ s "let ref elems = self.0;"
   , genFor (s "elem in elems.iter()")
            (s "try!(elem.encode(ctx));")
   , genOk genUnit
   ]
-  where
-    elType = genTypeName id
-    sz     = s . show $ len
 
 genEncodeNewtype :: Doc -> Doc
 genEncodeNewtype nm = vcat
@@ -372,9 +369,9 @@ genEncodeNewtype nm = vcat
   ]
 
 genDecodeNewtype :: Doc -> C.Identifier -> Doc
-genDecodeNewtype nm id = genOk (nm <> parens (genTryDecode innerType))
+genDecodeNewtype nm ident = genOk (nm <> parens (genTryDecode innerType))
   where
-    innerType = genTypeName id
+    innerType = genTypeName ident
 
 genEncodeEnumerationEnum :: S.Type -> Doc
 genEncodeEnumerationEnum tp = vcat
@@ -400,14 +397,14 @@ genDecodeEnumerationEnum tp = vcat
 
 genEncodeEnum :: Doc -> S.Type -> Doc
 genEncodeEnum nm tp = vcat
-  [ genMatch (s "self") (map (genEncodeEnumMatchArm nm) (S.unionFields td)) <> semi
+  [ genMatch (s "self") (map genEncodeEnumMatchArm (S.unionFields td)) <> semi
   , genOk genUnit
   ]
   where
     td = S.typeDesc tp
     tagType = genTagTypeName . S.unionTag $ td
-    genEncodeEnumMatchArm :: Doc -> S.Field -> (Doc,Doc)
-    genEncodeEnumMatchArm nm field = (pattern, exprs)
+    genEncodeEnumMatchArm :: S.Field -> (Doc,Doc)
+    genEncodeEnumMatchArm field = (pattern, exprs)
       where
         variantName = genFieldName (S.fieldName field)
         idx = s (show (S.fieldIndex field))
@@ -434,10 +431,10 @@ genDecodeEnum nm tp = vcat
   where
     td = S.typeDesc tp
     tagType = genTagTypeName . S.unionTag $ td
-    matchArms = map (genDecodeEnumMatchArm nm) (S.unionFields td)
+    matchArms = map genDecodeEnumMatchArm (S.unionFields td)
                 ++ [(s "_", s "Err(Error::InvalidTag),")]
-    genDecodeEnumMatchArm :: Doc -> S.Field -> (Doc,Doc)
-    genDecodeEnumMatchArm nm field = case field of
+    genDecodeEnumMatchArm :: S.Field -> (Doc,Doc)
+    genDecodeEnumMatchArm field = case field of
       S.EmptyField {..} -> (idx , genOk (nm <::> variantName) <> comma)
       S.DataField {..}  -> (idx , genOk (nm <::> variantName <> parens
                                           (genTryDecode variantType)

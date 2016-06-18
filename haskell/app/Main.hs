@@ -3,7 +3,6 @@ module Main where
 
 import           Cauterize.RustRef.Generate
 import           Cauterize.RustRef.Options
-import           Cauterize.RustRef.Util
 import           Data.Text
 import           Data.Text.IO               (writeFile)
 import           Prelude                    hiding (writeFile)
