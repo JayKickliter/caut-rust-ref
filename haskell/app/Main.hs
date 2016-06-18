@@ -1,8 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+
 module Main where
 
 import           Cauterize.RustRef.Generate
 import           Cauterize.RustRef.Options
+import           Cauterize.RustRef.Static
+import qualified Data.ByteString            as B
 import           Data.Text
 import           Data.Text.IO               (writeFile)
 import           Prelude                    hiding (writeFile)
@@ -15,10 +19,13 @@ main :: IO ()
 main = runWithOptions caut2rust
 
 caut2rust :: RustOpts -> IO ()
-caut2rust RustOpts { specFile = sf, outputDirectory = od } = createGuard od $ do
-  spec <- loadSpec sf
+caut2rust RustOpts {..} = do
+  createGuard outputDirectory
+  createGuard (combine outputDirectory  "src")
+  spec <- loadSpec specFile
   let baseName = unpack $ S.specName spec
-  generateDynamicFiles od baseName spec
+  copyStaticFilesTo outputDirectory
+  generateDynamicFiles outputDirectory baseName spec
   where
     loadSpec :: FilePath -> IO S.Specification
     loadSpec p = do
@@ -27,18 +34,24 @@ caut2rust RustOpts { specFile = sf, outputDirectory = od } = createGuard od $ do
         Left e -> error $ show e
         Right s' -> return s'
 
-createGuard :: FilePath -> IO a -> IO a
-createGuard out go = do
+createGuard :: FilePath -> IO ()
+createGuard out = do
   fe <- doesFileExist out
   de <- doesDirectoryExist out
   if fe
     then error $ "Error: " ++ out ++ " is a file."
-    else if de
-          then go
-          else createDirectory out >> go
+    else createDirectory out
+
+copyStaticFilesTo :: FilePath -> IO ()
+copyStaticFilesTo path = mapM_ go allFiles
+  where
+    go (p, d) = B.writeFile (path `combine` p) d
 
 generateDynamicFiles :: FilePath -> String -> S.Specification -> IO ()
 generateDynamicFiles path baseName spec = do
   writeFile fullName (genRust spec)
+  writeFile manifestName (genManifest spec)
   where
-    fullName = combine path (baseName ++ ".rs")
+    srcDir = combine path "src"
+    fullName = combine srcDir (baseName ++ ".rs")
+    manifestName = combine path "Cargo.toml"

@@ -15,18 +15,22 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      haskell/src
+  ghc-options:         -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
   exposed-modules:     Cauterize.RustRef.Generate
                      , Cauterize.RustRef.Util
+                     , Cauterize.RustRef.Static
   build-depends:       base >= 4.7 && < 5
                      , cauterize >= 0.1.0.0
                      , text
                      , wl-pprint
+                     , bytestring
+                     , file-embed
   default-language:    Haskell2010
 
 executable caut-rust-ref
   hs-source-dirs:      haskell/app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -W -Wall -Werror -fwarn-name-shadowing
+  ghc-options:         -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
   other-modules:       Cauterize.RustRef.Options
   build-depends:       base
                      , caut-rust-ref

@@ -3,6 +3,7 @@
 
 module Cauterize.RustRef.Generate
        ( genRust
+       , genManifest
        ) where
 
 import qualified Cauterize.CommonTypes   as C
@@ -114,6 +115,32 @@ genComment :: Doc -> Doc
 genComment d = s "//" <+> d
 
 
+---------------------------
+-- Cargo.toml generation --
+---------------------------
+
+genManifest :: S.Specification -> T.Text
+genManifest spec= T.pack . renderDoc $ vcat
+  [ s "[package]"
+  , s "name =" <+> dquotes specName
+  , s "version =" <+> dquotes specVersion
+  , s "authors = [\"author\"]"
+  , empty
+  , s "[lib]"
+  , s "name =" <+> dquotes specName
+  , s "path =" <+> dquotes (s "src/" <> specName <> s ".rs")
+  , empty
+  , s "[dependencies]"
+  , s "byteorder = \"0.5\""
+  , empty
+  , s "[dev-dependencies]"
+  , s "quickcheck = \"0.2\""
+  , s "quickcheck_macros = \"0.2\""
+  ]
+  where
+    specName    = t . S.specName    $ spec
+    specVersion = t . S.specVersion $ spec
+
 -----------------------
 -- Source generation --
 -----------------------
@@ -123,8 +150,13 @@ genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource spec = renderDoc $ vcat $ punctuate empty
-  [ s "#![allow(dead_code,unused_variables)]"
-  , s "extern crate cauterize;"
+  [ s "#![cfg_attr(test, feature(plugin))]"
+  , s "#![cfg_attr(test, plugin(quickcheck_macros))]"
+  , s "#![allow(dead_code,unused_variables)]"
+  , s "#[cfg(test)]"
+  , s "#[macro_use]"
+  , s "extern crate quickcheck;"
+  , s "mod cauterize;"
   , s "use self::cauterize::{Error, Encoder, Decoder, Cauterize};"
   , s "use std::mem;"
   , empty
