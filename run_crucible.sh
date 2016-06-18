@@ -1,10 +1,12 @@
 #!/bin/sh
 
-stack exec crucible -- tester \
+rm -rf crucible-*
+
+stack exec crucible -- tester                                       \
   --build-cmd="stack exec caut-rust-ref -- --spec=%s --output=rust" \
-  --build-cmd="cd c11 && make" \
-  --run-cmd="./c11/test_client" \
-  --schema-count=1 \
-  --instance-count=1000 \
-  --type-count=10 \
-  --enc-size=1024
+  --build-cmd="cargo build --manifest-path rust/Cargo.toml"         \
+  --run-cmd="cat"                                                   \
+  --schema-count=1                                                  \
+  --instance-count=1000                                             \
+  --type-count=10                                                   \
+  --enc-size=1024                                                   \

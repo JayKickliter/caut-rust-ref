@@ -114,6 +114,9 @@ genTryEncode a = genTry (a <> s ".encode(ctx)")
 genComment :: Doc -> Doc
 genComment d = s "//" <+> d
 
+genUnitialized :: Doc
+genUnitialized = genUnsafe $ s "mem::uninitialized()"
+
 
 ---------------------------
 -- Cargo.toml generation --
@@ -123,7 +126,7 @@ genManifest :: S.Specification -> T.Text
 genManifest spec= T.pack . renderDoc $ vcat
   [ s "[package]"
   , s "name =" <+> dquotes specName
-  , s "version =" <+> dquotes specVersion
+  , s "version = \"0.1.0\"" -- TODO: the following does not work due to cargo's semver requirements: dquotes specVersion
   , s "authors = [\"author\"]"
   , empty
   , s "[lib]"
@@ -179,14 +182,14 @@ genSource spec = renderDoc $ vcat $ punctuate empty
 
 genType :: S.Type -> Doc
 genType tp = case S.typeDesc tp of
-    S.Array{}       -> genDerive [Debug,Default,PartialEq] <$$> genArrayArray nm tp
-    S.Combination{} -> genDerive [Debug,PartialEq]         <$$> genCombinationStruct nm tp
-    S.Enumeration{} -> genDerive [Debug,PartialEq]         <$$> genEnumerationEnum nm tp
+    S.Array{}       -> genArrayArray nm tp
+    S.Combination{} -> genCombinationStruct nm tp
+    S.Enumeration{} -> genEnumerationEnum nm tp
     S.Range{}       -> range2unimplemented nm tp
-    S.Record{}      -> genDerive [Debug,Default,PartialEq] <$$> genRecordStruct nm tp
-    S.Synonym{}     -> genDerive [Debug,Default,PartialEq] <$$> genSynonymNewtype nm tp
-    S.Union{}       -> genDerive [Debug,PartialEq]         <$$> genUnionEnum nm tp
-    S.Vector{}      -> genDerive [Debug,Default,PartialEq] <$$> genVectorVec nm tp
+    S.Record{}      -> genRecordStruct nm tp
+    S.Synonym{}     -> genSynonymNewtype nm tp
+    S.Union{}       -> genUnionEnum nm tp
+    S.Vector{}      -> genVectorVec nm tp
     where
       nm = genTypeName $ S.typeName tp
 
@@ -375,8 +378,7 @@ genDecodeInner tp@S.Type {..} =
 genDecodeArray :: Doc -> C.Identifier -> C.Length -> Doc
 genDecodeArray nm ident len = vcat
   [ s "let mut arr:" <+> brackets (elType <> semi <+> sz)
-    <+> equals
-    <+> s "Default::default();"
+    <+> equals <+> genUnitialized <> semi
   , genFor (s "i in 0.." <> sz)
     (s "arr[i] =" <+> genTryDecode elType <> semi)
   , genOk (nm <> parens (s "arr"))
@@ -507,8 +509,6 @@ genEncodeVec nm S.Vector {..} = vcat
   where
     tagType = genTagTypeName vectorTag
     maxLen = s . show $ vectorLength
-    elType = genTypeName vectorRef
-
 
 genDecodeVec :: Doc -> S.TypeDesc -> Doc
 genDecodeVec nm S.Vector {..} = vcat

@@ -20,3 +20,4 @@ test: test-rust
 clean:
 	stack clean
 	cargo clean
+	rm -rf crucible-*
