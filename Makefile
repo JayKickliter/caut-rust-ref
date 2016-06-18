@@ -16,3 +16,7 @@ rust-test:
 	cargo test -- --nocapture
 
 test: test-rust
+
+clean:
+	stack clean
+	cargo clean
