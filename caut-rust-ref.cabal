@@ -26,7 +26,7 @@ library
 executable caut-rust-ref
   hs-source-dirs:      haskell/app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -W -Wall -Werror
   other-modules:       Cauterize.RustRef.Options
   build-depends:       base
                      , caut-rust-ref
