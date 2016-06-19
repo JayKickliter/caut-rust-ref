@@ -1,6 +1,12 @@
 extern crate byteorder;
 use std::io::{Write, Read, Cursor};
+use std::mem;
+use std::ops;
 use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+
+/*************************/
+/* Core types and traits */
+/*************************/
 
 #[derive(Debug)]
 pub enum Error {
@@ -22,7 +28,6 @@ impl Decoder {
     }
 }
 
-
 pub struct Encoder {
     pub csr: Cursor<Vec<u8>>,
 }
@@ -42,6 +47,20 @@ pub trait Cauterize: 'static + Sized {
     fn encode(&self, &mut Encoder) -> Result<(), Error>;
 }
 
+
+pub trait Range: Sized {
+    type P;
+    type T;
+    const OFFSET: Self::P;
+    const LENGTH: Self::P;
+    fn new(val: Self::P) -> Result<Self,()>;
+    fn set(&mut self, val: Self::P) -> Option<Self::P>;
+    fn get(&self) -> Self::P;
+}
+
+/*******************/
+/* Primitive impls */
+/*******************/
 
 impl Cauterize for u8 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
@@ -224,6 +243,7 @@ impl Cauterize for bool {
         val.encode(ctx)
     }
 }
+
 
 
 #[cfg(test)]

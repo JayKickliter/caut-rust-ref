@@ -117,9 +117,12 @@ genComment d = s "//" <+> d
 genUnitialized :: Doc
 genUnitialized = genUnsafe $ s "mem::uninitialized()"
 
+genPrimTypeName :: C.Prim -> Doc
+genPrimTypeName = t . cautPrimToRustPrim
+
 
 ---------------------------
--- Cargo.toml generation --
+  -- Cargo.toml generation --
 ---------------------------
 
 genManifest :: S.Specification -> T.Text
@@ -156,11 +159,13 @@ genSource spec = renderDoc $ vcat $ punctuate empty
   [ s "#![cfg_attr(test, feature(plugin))]"
   , s "#![cfg_attr(test, plugin(quickcheck_macros))]"
   , s "#![allow(dead_code,unused_variables)]"
+  , s "#![feature(associated_consts)]"
+  , empty
   , s "#[cfg(test)]"
   , s "#[macro_use]"
   , s "extern crate quickcheck;"
   , s "mod cauterize;"
-  , s "use self::cauterize::{Error, Encoder, Decoder, Cauterize};"
+  , s "use self::cauterize::{Error, Encoder, Decoder, Cauterize, Range};"
   , s "use std::mem;"
   , empty
   , s "pub static SPEC_NAME: &'static str =" <+> dquotes specName <> semi
@@ -181,24 +186,30 @@ genSource spec = renderDoc $ vcat $ punctuate empty
 ---------------------
 
 genType :: S.Type -> Doc
-genType tp = case S.typeDesc tp of
+genType tp@S.Type{..} = case typeDesc of
     S.Array{}       -> genArrayArray nm tp
     S.Combination{} -> genCombinationStruct nm tp
     S.Enumeration{} -> genEnumerationEnum nm tp
-    S.Range{}       -> range2unimplemented nm tp
     S.Record{}      -> genRecordStruct nm tp
     S.Synonym{}     -> genSynonymNewtype nm tp
     S.Union{}       -> genUnionEnum nm tp
     S.Vector{}      -> genVectorVec nm tp
+    S.Range{}       -> vcat [ genRange nm
+                            , empty
+                            , genRangeImpl nm typeDesc
+                            ]
     where
-      nm = genTypeName $ S.typeName tp
+      nm = genTypeName typeName
 
 genVec :: Doc -> Doc
 genVec d = s "Vec" <> angles d
 
-genNewType :: Doc -> Doc -> Doc
-genNewType nm tp =
-  s "pub struct" <+> nm <>  parens (s "pub" <+> tp) <>  semi
+genNewType :: Doc -> Bool ->  Doc-> Doc
+genNewType nm pub tp  =
+  s "pub struct" <+> nm <>  parens (visibility <> tp) <>  semi
+  where
+    visibility | pub == True = s "pub "
+               | otherwise   = empty
 
 genEnum :: Doc -> [Doc] -> Doc
 genEnum nm fields = vcat
@@ -214,11 +225,46 @@ genStruct nm fields = vcat
   , rbrace
   ]
 
-range2unimplemented :: Doc -> S.Type -> Doc
-range2unimplemented nm tp = vcat
-  [ genComment $ s "Range type not yet implemented."
-  , genEnum nm [empty]
-  ]
+genRange :: Doc -> Doc
+genRange nm = genNewType nm False (s "usize")
+
+genRangeImpl :: Doc -> S.TypeDesc -> Doc
+genRangeImpl nm S.Range {..} =
+  s "impl Range for" <+> nm <+> genBlock
+  ( vcat
+    [ s "type P =" <+> primType <> semi
+    , s "type T =" <+> tagType <> semi
+    , s "const OFFSET:" <+> primType <+> equals <+> offset <> semi
+    , s "const LENGTH:" <+> primType <+> equals <+> len <> semi
+    , s "fn new(val: Self::P) -> Result<Self,()>" <+> genBlock
+      (
+        vcat
+        [ s "if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH)" <+> genBlock
+          ( s "return" <+> genOk (nm <> parens (s "val")) <> semi
+          )
+        , s "Err(())"
+        ]
+      )
+    , s "fn set" <> parens (s "&mut self, val:" <+> primType) <+> s "-> Option" <> angles primType <+> genBlock
+      (
+        vcat
+        [ s "if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH)" <+> genBlock
+          ( vcat
+            [ s "self.0 = val;"
+            , s "return None;"
+            ]
+          )
+        , s "Some(val)"
+        ]
+      )
+    , s "fn get(&self) ->" <+> primType <+> genBlock ( s "self.0")
+    ]
+  )
+  where
+    offset = s . show $ rangeOffset
+    len = s . show $ rangeLength
+    tagType = genTagTypeName rangeTag
+    primType = genPrimTypeName rangePrim
 
 genCombinationStruct :: Doc -> S.Type -> Doc
 genCombinationStruct nm tp = genStruct nm fields
@@ -241,14 +287,14 @@ genEnumerationEnum nm tp = vcat
     tagType = genTagTypeName . S.enumerationTag $  td
 
 genArrayArray :: Doc -> S.Type -> Doc
-genArrayArray nm tp = genNewType nm (brackets $ elType <> semi <+> sz)
+genArrayArray nm tp = genNewType nm True (brackets $ elType <> semi <+> sz)
   where
     td     = S.typeDesc tp
     elType = genTypeName . S.arrayRef $  td
     sz     = s . show . S.arrayLength $ td
 
 genVectorVec :: Doc -> S.Type -> Doc
-genVectorVec nm tp = genNewType nm (genVec elType)
+genVectorVec nm tp = genNewType nm True (genVec elType)
   where
     td     = S.typeDesc tp
     elType = genTypeName . S.vectorRef $  td
@@ -259,7 +305,7 @@ genUnionEnum nm tp = genEnum nm fields
     fields = genFields tp
 
 genSynonymNewtype :: Doc -> S.Type -> Doc
-genSynonymNewtype nm tp = genNewType nm st
+genSynonymNewtype nm tp = genNewType nm True st
   where
     td = S.typeDesc tp
     sr = S.synonymRef td
@@ -346,7 +392,7 @@ genEncodeInner tp@S.Type {..} =
     S.Array{}       -> genEncodeArray
     S.Combination{} -> genEncodeCombinationStruct nm typeDesc
     S.Enumeration{} -> genEncodeEnumerationEnum tp
-    S.Range{}       -> s "unimplemented!();"
+    S.Range{}       -> genEncodeRange nm typeDesc
     S.Record{}      -> genEncodeStruct typeDesc
     S.Synonym{..}   -> genEncodeNewtype nm
     S.Union{}       -> genEncodeEnum nm tp
@@ -367,7 +413,7 @@ genDecodeInner tp@S.Type {..} =
     S.Array {..}    -> genDecodeArray nm arrayRef arrayLength
     S.Combination{} -> genDecodeCombinationStruct nm typeDesc
     S.Enumeration{} -> genDecodeEnumerationEnum tp
-    S.Range{}       -> s "unimplemented!();"
+    S.Range{}       -> genDecodeRange nm typeDesc
     S.Record{}      -> genDecodeStruct nm typeDesc
     S.Synonym{..}   -> genDecodeNewtype nm synonymRef
     S.Union{}       -> genDecodeEnum nm tp
@@ -576,3 +622,9 @@ genDecodeCombinationStruct nm S.Combination {..} = vcat
       where
         fIdx  = s . show $ S.fieldIndex field
         fName = genStructFieldName $ S.fieldName field
+
+genEncodeRange :: Doc -> S.TypeDesc -> Doc
+genEncodeRange _ _ = s "unimplemented!();"
+
+genDecodeRange :: Doc -> S.TypeDesc -> Doc
+genDecodeRange _ _ = s "unimplemented!();"
