@@ -40,7 +40,9 @@ createGuard out = do
   de <- doesDirectoryExist out
   if fe
     then error $ "Error: " ++ out ++ " is a file."
-    else createDirectory out
+    else if de
+         then return ()
+         else createDirectory out
 
 copyStaticFilesTo :: FilePath -> IO ()
 copyStaticFilesTo path = mapM_ go allFiles

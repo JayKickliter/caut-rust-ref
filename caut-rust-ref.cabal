@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  ghc-options:         -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
+  ghc-options:         -Werror -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
   exposed-modules:     Cauterize.RustRef.Generate
                      , Cauterize.RustRef.Util
                      , Cauterize.RustRef.Static
@@ -30,7 +30,7 @@ library
 executable caut-rust-ref
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
+  ghc-options:         -Werror -Wall -static -fwarn-unused-imports -fwarn-name-shadowing
   other-modules:       Cauterize.RustRef.Options
   build-depends:       base
                      , caut-rust-ref
