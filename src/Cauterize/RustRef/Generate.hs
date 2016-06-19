@@ -194,7 +194,7 @@ genType tp@S.Type{..} = case typeDesc of
     S.Synonym{}     -> genSynonymNewtype nm tp
     S.Union{}       -> genUnionEnum nm tp
     S.Vector{}      -> genVectorVec nm tp
-    S.Range{}       -> vcat [ genRange nm
+    S.Range{}       -> vcat [ genRange nm typeDesc
                             , empty
                             , genRangeImpl nm typeDesc
                             ]
@@ -225,8 +225,11 @@ genStruct nm fields = vcat
   , rbrace
   ]
 
-genRange :: Doc -> Doc
-genRange nm = genNewType nm False (s "usize")
+genRange :: Doc -> S.TypeDesc -> Doc
+genRange nm S.Range{..} = genNewType nm False primType
+  where
+    primType = genPrimTypeName rangePrim
+
 
 genRangeImpl :: Doc -> S.TypeDesc -> Doc
 genRangeImpl nm S.Range {..} =
@@ -236,13 +239,13 @@ genRangeImpl nm S.Range {..} =
     , s "type T =" <+> tagType <> semi
     , s "const OFFSET:" <+> primType <+> equals <+> offset <> semi
     , s "const LENGTH:" <+> primType <+> equals <+> len <> semi
-    , s "fn new(val: Self::P) -> Result<Self,()>" <+> genBlock
+    , s "fn new(val: Self::P) -> Result<Self,Error>" <+> genBlock
       (
         vcat
         [ s "if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH)" <+> genBlock
           ( s "return" <+> genOk (nm <> parens (s "val")) <> semi
           )
-        , s "Err(())"
+        , s "Err(Error::OutOfRange)"
         ]
       )
     , s "fn set" <> parens (s "&mut self, val:" <+> primType) <+> s "-> Option" <> angles primType <+> genBlock
@@ -624,7 +627,21 @@ genDecodeCombinationStruct nm S.Combination {..} = vcat
         fName = genStructFieldName $ S.fieldName field
 
 genEncodeRange :: Doc -> S.TypeDesc -> Doc
-genEncodeRange _ _ = s "unimplemented!();"
+genEncodeRange nm S.Range {..} = vcat
+  [ s "let tag =" <+> parens (s "self.0 +" <+> offset) <+> s "as" <+> tagType <> semi
+  , genOk . genTryEncode $ s "tag"
+  ]
+  where
+    offset = s . show $ rangeOffset
+    tagType = genTagTypeName rangeTag
+    primType = genPrimTypeName rangePrim
 
 genDecodeRange :: Doc -> S.TypeDesc -> Doc
-genDecodeRange _ _ = s "unimplemented!();"
+genDecodeRange nm S.Range {..} = vcat
+  [ s "let tag =" <+> genTryDecode tagType <+> s "as" <+> primType <> semi
+  , nm <> s "::new" <> parens (s "tag +" <+> offset)
+  ]
+  where
+    offset = s . show $ rangeOffset
+    tagType = genTagTypeName rangeTag
+    primType = genPrimTypeName rangePrim

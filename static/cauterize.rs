@@ -1,7 +1,5 @@
 extern crate byteorder;
 use std::io::{Write, Read, Cursor};
-use std::mem;
-use std::ops;
 use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 /*************************/
@@ -15,6 +13,7 @@ pub enum Error {
     InvalidTag,
     InvalidValue,
     ElementCount,
+    OutOfRange
 }
 
 type CautEndian = LittleEndian;
@@ -53,7 +52,7 @@ pub trait Range: Sized {
     type T;
     const OFFSET: Self::P;
     const LENGTH: Self::P;
-    fn new(val: Self::P) -> Result<Self,()>;
+    fn new(val: Self::P) -> Result<Self,Error>;
     fn set(&mut self, val: Self::P) -> Option<Self::P>;
     fn get(&self) -> Self::P;
 }

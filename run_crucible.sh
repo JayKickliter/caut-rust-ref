@@ -8,5 +8,5 @@ stack exec crucible -- tester                                       \
   --run-cmd="cat"                                                   \
   --schema-count=1                                                  \
   --instance-count=1000                                             \
-  --type-count=10                                                   \
+  --type-count=100                                                  \
   --enc-size=1024                                                   \
