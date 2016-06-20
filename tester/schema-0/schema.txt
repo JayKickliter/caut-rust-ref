@@ -1,0 +1,16 @@
+(name "aey")
+(version "uy")
+(type 
+  a
+  combination
+  (fields 
+    (empty a)
+    (empty e)
+    (empty i)
+    (empty o)
+    (empty u)
+    (field y s16)
+    (field aa s32)
+    (empty ae)
+    (field ai s32)
+    (field ao u8)))

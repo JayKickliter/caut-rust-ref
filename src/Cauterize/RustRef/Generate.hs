@@ -176,6 +176,10 @@ genManifest spec =
          , s "name =" <+> dquotes specName
          , s "path =" <+> dquotes (s "src/" <> specName <> s ".rs")
          , empty
+         , s "[[bin]]"
+         , s "name = \"tester\""
+         , s "path = \"bin/tester.rs\""
+         , empty
          , s "[dependencies]"
          , s "byteorder = \"0.5\""
          , empty
@@ -199,7 +203,7 @@ genSource :: S.Specification -> String
 genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   [ s "#![cfg_attr(test, feature(plugin))]"
   , s "#![cfg_attr(test, plugin(quickcheck_macros))]"
-  , s "#![allow(dead_code,unused_variables)]"
+  , s "#![allow(dead_code,unused_variables,unused_imports)]"
   , s "#![feature(associated_consts)]"
   , empty
   , s "#[cfg(test)]"
@@ -628,3 +632,10 @@ genRangeImpl name td =
         primType = genPrimTypeName rangePrim
 
     _ -> error "Calling me with anything other than a Range makes no sense"
+
+
+-----------------------
+-- Tester generation --
+-----------------------
+
+-- 0100 dfc5 05

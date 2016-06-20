@@ -1,0 +1,25 @@
+(name "aey")
+(version "uy")
+(fingerprint 9abe04d5ee159dadf09f6c559749a06aea942859)
+(size 1 13)
+(depth 2)
+(typelength 1)
+(lengthtag t1)
+(type 
+  a
+  combination
+  (fingerprint d250699a48b034c0732ff71c0e330a36ec58a939)
+  (size 2 13)
+  (depth 2)
+  t2
+  (fields 
+    (empty a 0)
+    (empty e 1)
+    (empty i 2)
+    (empty o 3)
+    (empty u 4)
+    (field y 5 s16)
+    (field aa 6 s32)
+    (empty ae 7)
+    (field ai 8 s32)
+    (field ao 9 u8)))
