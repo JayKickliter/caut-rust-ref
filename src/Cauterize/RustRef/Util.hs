@@ -7,11 +7,14 @@ module Cauterize.RustRef.Util
   , cautFieldToRustField
   , cautTagToRustType
   , cautPrimToRustPrim
+  , showByte
   ) where
 
 
 import qualified Cauterize.CommonTypes as C
 import qualified Data.Text             as T
+import           Data.Word               (Word8)
+import           Numeric                 (showHex)
 
 cautIdToRustPrim :: C.Identifier -> T.Text
 cautIdToRustPrim i = case C.unIdentifier i of
@@ -58,3 +61,9 @@ cautTagToRustType tag = case tag of
                           C.T2 -> "u16"
                           C.T4 -> "u32"
                           C.T8 -> "u64"
+
+showByte :: Word8 -> String
+showByte b = "0x" ++ case showHex b "" of
+                       [u,l] -> [u,l]
+                       [l]   -> ['0',l]
+                       _     -> error "this never happens"

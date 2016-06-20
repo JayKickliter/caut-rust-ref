@@ -5,6 +5,7 @@ module Main where
 
 import           Cauterize.RustRef.Generate
 import           Cauterize.RustRef.Options
+import           Cauterize.RustRef.Tester
 import           Cauterize.RustRef.Static
 import qualified Data.ByteString            as B
 import           Data.Text
@@ -22,6 +23,7 @@ caut2rust :: RustOpts -> IO ()
 caut2rust RustOpts {..} = do
   createGuard outputDirectory
   createGuard (combine outputDirectory  "src")
+  createGuard (combine outputDirectory  "bin")
   spec <- loadSpec specFile
   let baseName = unpack $ S.specName spec
   copyStaticFilesTo outputDirectory
@@ -53,7 +55,10 @@ generateDynamicFiles :: FilePath -> String -> S.Specification -> IO ()
 generateDynamicFiles path baseName spec = do
   writeFile fullName (genRust spec)
   writeFile manifestName (genManifest spec)
+  writeFile testerName (genTester spec)
   where
     srcDir = combine path "src"
+    binDir = combine path "bin"
     fullName = combine srcDir (baseName ++ ".rs")
     manifestName = combine path "Cargo.toml"
+    testerName = combine binDir "tester.rs"

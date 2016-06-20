@@ -12,8 +12,8 @@ import           Cauterize.RustRef.Util
 import qualified Cauterize.Specification as S
 import           Data.Maybe
 import qualified Data.Text               as T
-import           Data.Word               (Word8)
-import           Numeric                 (showHex)
+-- import           Data.Word               (Word8)
+-- import           Numeric                 (showHex)
 import           Text.PrettyPrint.Leijen hiding (indent)
 import qualified Text.PrettyPrint.Leijen as L
 
@@ -145,12 +145,6 @@ genStruct nm fields = vcat
 intercalate :: Doc -> [Doc] -> Doc
 intercalate seperator elems = cat (punctuate seperator elems)
 
-showByte :: Word8 -> String
-showByte b = "0x" ++ case showHex b "" of
-                       [u,l] -> [u,l]
-                       [l]   -> ['0',l]
-                       _     -> error "this never happens"
-
 genFingerprint :: H.Hash -> Doc
 genFingerprint f = brackets (intercalate comma bytes)
   where
@@ -209,7 +203,7 @@ genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   , s "#[cfg(test)]"
   , s "#[macro_use]"
   , s "extern crate quickcheck;"
-  , s "mod cauterize;"
+  , s "pub mod cauterize;"
   , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range};"
   , s "use std::mem;"
   , empty
