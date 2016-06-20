@@ -42,6 +42,14 @@ impl Encoder {
 
 
 pub trait Cauterize: 'static + Sized {
+    const FINGERPRINT: [u8;20];
+    const SIZE_MIN: usize;
+    const SIZE_MAX: usize;
+    fn decode(&mut Decoder) -> Result<Self, Error>;
+    fn encode(&self, &mut Encoder) -> Result<(), Error>;
+}
+
+pub trait Primitive: 'static + Sized {
     fn decode(&mut Decoder) -> Result<Self, Error>;
     fn encode(&self, &mut Encoder) -> Result<(), Error>;
 }
@@ -61,7 +69,7 @@ pub trait Range: Sized {
 /* Primitive impls */
 /*******************/
 
-impl Cauterize for u8 {
+impl Primitive for u8 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
@@ -80,7 +88,7 @@ impl Cauterize for u8 {
     }
 }
 
-impl Cauterize for i8 {
+impl Primitive for i8 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
         match ctx.csr.read(buf) {
@@ -99,7 +107,7 @@ impl Cauterize for i8 {
 }
 
 
-impl Cauterize for u16 {
+impl Primitive for u16 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -115,7 +123,7 @@ impl Cauterize for u16 {
     }
 }
 
-impl Cauterize for i16 {
+impl Primitive for i16 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -131,7 +139,7 @@ impl Cauterize for i16 {
     }
 }
 
-impl Cauterize for u32 {
+impl Primitive for u32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -147,7 +155,7 @@ impl Cauterize for u32 {
     }
 }
 
-impl Cauterize for i32 {
+impl Primitive for i32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -163,7 +171,7 @@ impl Cauterize for i32 {
     }
 }
 
-impl Cauterize for u64 {
+impl Primitive for u64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_u64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -179,7 +187,7 @@ impl Cauterize for u64 {
     }
 }
 
-impl Cauterize for i64 {
+impl Primitive for i64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_i64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -195,7 +203,7 @@ impl Cauterize for i64 {
     }
 }
 
-impl Cauterize for f32 {
+impl Primitive for f32 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_f32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -211,7 +219,7 @@ impl Cauterize for f32 {
     }
 }
 
-impl Cauterize for f64 {
+impl Primitive for f64 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match ctx.csr.read_f64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
@@ -227,7 +235,7 @@ impl Cauterize for f64 {
     }
 }
 
-impl Cauterize for bool {
+impl Primitive for bool {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         match u8::decode(ctx) {
             Ok(0) => Ok(false),

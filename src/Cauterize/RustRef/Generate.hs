@@ -7,10 +7,13 @@ module Cauterize.RustRef.Generate
        ) where
 
 import qualified Cauterize.CommonTypes   as C
+import qualified Cauterize.Hash          as H
 import           Cauterize.RustRef.Util
 import qualified Cauterize.Specification as S
 import           Data.Maybe
 import qualified Data.Text               as T
+import           Data.Word               (Word8)
+import           Numeric                 (showHex)
 import           Text.PrettyPrint.Leijen hiding (indent)
 import qualified Text.PrettyPrint.Leijen as L
 
@@ -40,7 +43,7 @@ indent :: Doc -> Doc
 indent = L.indent 4
 
 renderDoc :: Doc -> String
-renderDoc d = displayS (renderPretty 1.0 80 d) ""
+renderDoc d = displayS (renderPretty 1.0 200 d) ""
 
 genTypeName :: C.Identifier -> Doc
 genTypeName n = s . cautTypeToRustType $ n
@@ -139,11 +142,22 @@ genStruct nm fields = vcat
   , rbrace
   ]
 
+intercalate :: Doc -> [Doc] -> Doc
+intercalate seperator elems = cat (punctuate seperator elems)
+
+showByte :: Word8 -> String
+showByte b = "0x" ++ case showHex b "" of
+                       [u,l] -> [u,l]
+                       [l]   -> ['0',l]
+                       _     -> error "this never happens"
+
+genFingerprint :: H.Hash -> Doc
+genFingerprint f = brackets (intercalate comma bytes)
+  where
+    bytes = map (s . showByte) (H.hashToBytes f)
+
 -- genDerive :: [Attribute] -> Doc
 -- genDerive attrs = s "#[derive" <> parens (intercalate comma (map pretty attrs)) <> rbracket
-
--- intercalate :: Doc -> [Doc] -> Doc
--- intercalate seperator elems = sep (punctuate seperator elems)
 
 
 ---------------------------
@@ -182,7 +196,7 @@ genRust :: S.Specification -> T.Text
 genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
-genSource spec = renderDoc $ vcat $ punctuate empty
+genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   [ s "#![cfg_attr(test, feature(plugin))]"
   , s "#![cfg_attr(test, plugin(quickcheck_macros))]"
   , s "#![allow(dead_code,unused_variables)]"
@@ -192,20 +206,19 @@ genSource spec = renderDoc $ vcat $ punctuate empty
   , s "#[macro_use]"
   , s "extern crate quickcheck;"
   , s "mod cauterize;"
-  , s "use self::cauterize::{Error, Encoder, Decoder, Cauterize, Range};"
+  , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range};"
   , s "use std::mem;"
   , empty
-  , s "pub static SPEC_NAME: &'static str =" <+> dquotes specName <> semi
+  , s "pub static SPEC_NAME: &'static str =" <+> dquotes (t specName) <> semi
+  , s "pub const SPEC_FINGERPRINT: [u8;20] =" <+> genFingerprint specFingerprint <> semi
   , empty
   , vcat [  genType tp <> linebreak
          <> empty <> linebreak
          <> genCautImpl tp <> linebreak
-         | tp <- S.specTypes spec
+         | tp <- specTypes
          ]
   , empty
   ]
-  where
-    specName = t . S.specName $ spec
 
 
 ---------------------
@@ -331,6 +344,10 @@ genFields S.Type {S.typeDesc = td} =
 genCautImpl :: S.Type -> Doc
 genCautImpl tp@S.Type {..} =
   vcat [ s "impl Cauterize for" <+> genTypeName typeName <+> lbrace
+       , indent $ s "const FINGERPRINT: [u8;20] =" <+> genFingerprint typeFingerprint <> semi
+       , indent $ s "const SIZE_MIN: usize =" <+> (s . show . C.sizeMin $ typeSize) <> semi
+       , indent $ s "const SIZE_MAX: usize =" <+> (s . show . C.sizeMax $ typeSize) <> semi
+       , empty
        , indent $ genEncode tp
        , empty
        , indent $ genDecode tp
