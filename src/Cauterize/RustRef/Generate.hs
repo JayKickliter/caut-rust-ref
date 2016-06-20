@@ -211,6 +211,8 @@ genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   , empty
   , s "pub static SPEC_NAME: &'static str =" <+> dquotes (t specName) <> semi
   , s "pub const SPEC_FINGERPRINT: [u8;20] =" <+> genFingerprint specFingerprint <> semi
+  , s "pub const SPEC_MIN_SIZE: usize =" <+> s (show (C.sizeMin specSize)) <> semi
+  , s "pub const SPEC_MAX_SIZE: usize =" <+> s (show (C.sizeMax specSize)) <> semi
   , empty
   , vcat [  genType tp <> linebreak
          <> empty <> linebreak
