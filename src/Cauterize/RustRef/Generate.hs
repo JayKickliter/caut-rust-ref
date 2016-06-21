@@ -368,7 +368,7 @@ genEncodeInner S.Type {typeDesc = S.Synonym {}, ..} =
        ]
 
 genEncodeInner S.Type {typeDesc = S.Range {..}, ..} =
-  vcat [ s "let tag =" <+> parens (s "self.0 +" <+> offset) <+> s "as" <+> tagType <> semi
+  vcat [ s "let tag =" <+> parens (s "self.0 -" <+> offset) <+> s "as" <+> tagType <> semi
        , genOk . genTryEncode $ s "tag"
        ]
   where

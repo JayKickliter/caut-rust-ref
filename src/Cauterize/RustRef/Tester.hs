@@ -7,21 +7,22 @@ module Cauterize.RustRef.Tester
   ) where
 
 import qualified Cauterize.Hash            as H
+import qualified Cauterize.CommonTypes as C
 import qualified Cauterize.RustRef.Util    as U
 import qualified Cauterize.Specification   as S
 import           Data.String.Interpolation
 import qualified Data.Text                 as T
 
-genFingerprint :: H.Hash -> T.Text
-genFingerprint f = T.intercalate ", " bytes
+genFingerprint :: Integer -> H.Hash -> T.Text
+genFingerprint fpLen f  = T.intercalate ", " bytes
   where
-    bytes = map (T.pack . U.showByte) (take 2 (H.hashToBytes f))
+    bytes = map (T.pack . U.showByte) (take (fromIntegral fpLen) (H.hashToBytes f))
 
-makeTypeList :: [S.Type] -> [(T.Text,T.Text)]
-makeTypeList ts = zip typeNames fingerPrints
+makeTypeList :: Integer -> [S.Type] -> [(T.Text,T.Text)]
+makeTypeList fpLen ts = zip typeNames fingerPrints
   where
     typeNames = map (T.pack . U.cautTypeToRustType . S.typeName) ts
-    fingerPrints = map (genFingerprint . S.typeFingerprint) ts
+    fingerPrints = map ((genFingerprint fpLen) . S.typeFingerprint) ts
 
 
 
@@ -58,8 +59,8 @@ genTester S.Specification {..} = [str|
   use $specName$::*;
   use $specName$::cauterize::{Cauterize, Encoder, Decoder};
 
-  const FP_SIZE: usize = 2;
-  const LEN_SIZE: usize = 1;
+  const FP_SIZE: usize = $:fpLen$;
+  const LEN_SIZE: usize = $:lenSize$;
 
   ##[derive(Debug,Clone)]
   struct Header {
@@ -161,4 +162,6 @@ genTester S.Specification {..} = [str|
   }
   |]
   where
-    typeList = makeTypeList specTypes
+    typeList = makeTypeList fpLen specTypes
+    fpLen = specTypeLength
+    lenSize = C.sizeMax . C.tagToSize $ specLengthTag
