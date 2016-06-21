@@ -6,6 +6,7 @@ module Cauterize.RustRef.Tester
   ( genTester
   ) where
 
+import qualified Cauterize.CommonTypes     as C
 import qualified Cauterize.Hash            as H
 import qualified Cauterize.RustRef.Util    as U
 import qualified Cauterize.Specification   as S
@@ -27,14 +28,8 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
-           let a = match $typeName$::decode(&mut dctx) {
-               Ok(a) => a,
-               Err(_) => return Err("Could not decode type $typeName$"),
-           };
-           match a.encode(&mut ectx) {
-               Ok(_) => (),
-               Err(_) => return Err("Could not encode type $typeName$"),
-           };
+           let a = $typeName$::decode(&mut dctx).unwrap();
+           a.encode(&mut ectx).unwrap();
            let ebuf = ectx.consume();
            let message = Message {
                header: Header {
@@ -50,6 +45,7 @@ genMatchArm (typeName, pattern) =
 genTester :: S.Specification -> T.Text
 genTester S.Specification {..} = [str|
   ##![feature(slice_patterns)]
+  ##![allow(unused_imports)]
   use std::io;
   use std::io::{Read, Write};
   extern crate $specName$;
@@ -70,7 +66,7 @@ genTester S.Specification {..} = [str|
   impl Header {
       fn read(stream: &mut Read) -> Result<Header, (&'static str)> {
           // Read length tag from message
-          let len = match stream.read_$lenType$::<LittleEndian>() {
+          let len = match stream.$readLenTag$ {
               Ok(l) => l as usize,
               Err(_) => return Err("Could not read length tag"),
           };
@@ -93,7 +89,7 @@ genTester S.Specification {..} = [str|
 
       fn write(&self, stream: &mut Write) -> Result<(), &'static str> {
           // Write length tag
-          match stream.write_$lenType$::<LittleEndian>(self.len as $lenType$) {
+          match stream.$writeLenTag$ {
               Ok(_) => (),
               Err(_) => return Err("Cound not write length tag"),
           };
@@ -162,4 +158,13 @@ genTester S.Specification {..} = [str|
   where
     typeList = makeTypeList fpLen specTypes
     fpLen = specTypeLength
-    lenType = T.pack $ U.cautTagToRustType specLengthTag
+    readLenTag = case specLengthTag of
+                   C.T1 -> "read_u8()"
+                   C.T2 -> "read_u16::<LittleEndian>()"
+                   C.T4 -> "read_u32::<LittleEndian>()"
+                   C.T8 -> "read_u64::<LittleEndian>()"
+    writeLenTag = case specLengthTag of
+                   C.T1 -> "write_u8(self.len as u8)"
+                   C.T2 -> "write_u16::<LittleEndian>(self.len as u16)"
+                   C.T4 -> "write_u32::<LittleEndian>(self.len as u32)"
+                   C.T8 -> "write_u64::<LittleEndian>(self.len as u64)"

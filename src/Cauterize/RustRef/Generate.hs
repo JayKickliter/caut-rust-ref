@@ -375,7 +375,7 @@ genEncodeInner S.Type {typeDesc = S.Array {}} =
 
 genEncodeInner S.Type {typeDesc = S.Vector {..}} = vcat
   [ s "let len = self.0.len();"
-  , genIf (s "len >=" <+> maxLen)
+  , genIf (s "len >" <+> maxLen)
           (s "return Err(Error::ElementCount);")
   , genTryEncode (parens (s "len as" <+> tagType)) <> semi
   , genFor (s "elem in self.0.iter()")
@@ -493,7 +493,7 @@ genDecodeInner S.Type {typeDesc = S.Array {..}, ..} =
 
 genDecodeInner S.Type {typeDesc = S.Vector {..}, ..} =
   vcat [ s "let len =" <+> genTry (tagType <> s "::decode(ctx)") <+> s "as usize;"
-       , genIf (s "len >=" <+> maxLen)
+       , genIf (s "len >" <+> maxLen)
          (s "return Err(Error::ElementCount);")
        , s "let mut v: Vec" <> angles elType <+> s "= Vec::with_capacity(len);"
        , genFor (s "_ in 0..len")
