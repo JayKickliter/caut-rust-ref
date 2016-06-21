@@ -175,9 +175,8 @@ genManifest spec =
          , s "[dependencies]"
          , s "byteorder = \"0.5\""
          , empty
-         , s "[dev-dependencies]"
-         , s "quickcheck = \"0.2\""
-         , s "quickcheck_macros = \"0.2\""
+         , s "[dependencies.cauterize]"
+         , s "path = \"cauterize\""
          ]
   where
     specName = t $ S.specName spec
@@ -193,15 +192,10 @@ genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
-  [ s "#![cfg_attr(test, feature(plugin))]"
-  , s "#![cfg_attr(test, plugin(quickcheck_macros))]"
-  , s "#![allow(dead_code,unused_variables,unused_imports)]"
+  [ s "#![allow(dead_code,unused_variables,unused_imports)]"
   , s "#![feature(associated_consts)]"
   , empty
-  , s "#[cfg(test)]"
-  , s "#[macro_use]"
-  , s "extern crate quickcheck;"
-  , s "pub mod cauterize;"
+  , s "pub extern crate cauterize;"
   , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range};"
   , s "use std::mem;"
   , empty

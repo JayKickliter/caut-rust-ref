@@ -21,9 +21,9 @@ main = runWithOptions caut2rust
 
 caut2rust :: RustOpts -> IO ()
 caut2rust RustOpts {..} = do
-  createGuard outputDirectory
-  createGuard (combine outputDirectory  "src")
-  createGuard (combine outputDirectory  "bin")
+  createGuard $ outputDirectory </> "src"
+  createGuard $ outputDirectory </> "bin"
+  createGuard $ outputDirectory </> "cauterize" </> "src"
   spec <- loadSpec specFile
   let baseName = unpack $ S.specName spec
   copyStaticFilesTo outputDirectory
@@ -44,7 +44,7 @@ createGuard out = do
     then error $ "Error: " ++ out ++ " is a file."
     else if de
          then return ()
-         else createDirectory out
+         else createDirectoryIfMissing True out
 
 copyStaticFilesTo :: FilePath -> IO ()
 copyStaticFilesTo path = mapM_ go allFiles

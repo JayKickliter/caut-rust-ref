@@ -1,10 +1,17 @@
+#![cfg_attr(test, feature(plugin))]
+#![cfg_attr(test, plugin(quickcheck_macros))]
+#![feature(associated_consts)]
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
 extern crate byteorder;
 use std::io::{Write, Read, Cursor};
 use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
-/*************************/
-/* Core types and traits */
-/*************************/
+
+// **********************
+// Core types and traits
+// **********************
 
 #[derive(Debug)]
 pub enum Error {
@@ -13,7 +20,7 @@ pub enum Error {
     InvalidTag,
     InvalidValue,
     ElementCount,
-    OutOfRange
+    OutOfRange,
 }
 
 type CautEndian = LittleEndian;
@@ -42,7 +49,7 @@ impl Encoder {
 
 
 pub trait Cauterize: 'static + Sized {
-    const FINGERPRINT: [u8;20];
+    const FINGERPRINT: [u8; 20];
     const SIZE_MIN: usize;
     const SIZE_MAX: usize;
     fn decode(&mut Decoder) -> Result<Self, Error>;
@@ -60,14 +67,15 @@ pub trait Range: Sized {
     type T;
     const OFFSET: Self::P;
     const LENGTH: Self::P;
-    fn new(val: Self::P) -> Result<Self,Error>;
+    fn new(val: Self::P) -> Result<Self, Error>;
     fn set(&mut self, val: Self::P) -> Option<Self::P>;
     fn get(&self) -> Self::P;
 }
 
-/*******************/
-/* Primitive impls */
-/*******************/
+
+// ****************
+// Primitive impls
+// ****************
 
 impl Primitive for u8 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
@@ -105,7 +113,6 @@ impl Primitive for i8 {
         }
     }
 }
-
 
 impl Primitive for u16 {
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
@@ -252,7 +259,6 @@ impl Primitive for bool {
 }
 
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,6 +280,10 @@ mod tests {
     }
 
     impl Cauterize for CautPrim {
+        const FINGERPRINT: [u8; 20] = [0u8; 20];
+        const SIZE_MIN: usize = 0;
+        const SIZE_MAX: usize = 0;
+
         fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
             let tag = try!(u8::decode(ctx));
             match tag {

@@ -1,0 +1,15 @@
+[package]
+name = "cauterize"
+version = "0.1.0"
+authors = ["Jay Kickliter"]
+
+[lib]
+name = "cauterize"
+path = "src/cauterize.rs"
+
+[dependencies]
+byteorder = "0.5"
+
+[dev-dependencies]
+quickcheck = "0.2"
+quickcheck_macros = "0.2"
