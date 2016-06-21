@@ -12,8 +12,6 @@ import           Cauterize.RustRef.Util
 import qualified Cauterize.Specification as S
 import           Data.Maybe
 import qualified Data.Text               as T
--- import           Data.Word               (Word8)
--- import           Numeric                 (showHex)
 import           Text.PrettyPrint.Leijen hiding (indent)
 import qualified Text.PrettyPrint.Leijen as L
 

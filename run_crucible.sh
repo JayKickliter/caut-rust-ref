@@ -8,5 +8,5 @@ stack exec crucible -- tester                                            \
   --run-cmd="cargo run --manifest-path rust/Cargo.toml"                  \
   --schema-count=1                                                       \
   --instance-count=100                                                   \
-  --type-count=100                                                       \
+  --type-count=512                                                       \
   --enc-size=1024                                                        \

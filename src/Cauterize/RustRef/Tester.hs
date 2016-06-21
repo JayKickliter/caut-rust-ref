@@ -7,11 +7,11 @@ module Cauterize.RustRef.Tester
   ) where
 
 import qualified Cauterize.Hash            as H
-import qualified Cauterize.CommonTypes as C
 import qualified Cauterize.RustRef.Util    as U
 import qualified Cauterize.Specification   as S
 import           Data.String.Interpolation
 import qualified Data.Text                 as T
+
 
 genFingerprint :: Integer -> H.Hash -> T.Text
 genFingerprint fpLen f  = T.intercalate ", " bytes
@@ -23,8 +23,6 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
   where
     typeNames = map (T.pack . U.cautTypeToRustType . S.typeName) ts
     fingerPrints = map ((genFingerprint fpLen) . S.typeFingerprint) ts
-
-
 
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
@@ -57,10 +55,11 @@ genTester S.Specification {..} = [str|
   extern crate $specName$;
   ##[allow(unused_imports)]
   use $specName$::*;
-  use $specName$::cauterize::{Cauterize, Encoder, Decoder};
+  use $specName$::cauterize::Cauterize;
+  extern crate byteorder;
+  use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
   const FP_SIZE: usize = $:fpLen$;
-  const LEN_SIZE: usize = $:lenSize$;
 
   ##[derive(Debug,Clone)]
   struct Header {
@@ -70,21 +69,21 @@ genTester S.Specification {..} = [str|
 
   impl Header {
       fn read(stream: &mut Read) -> Result<Header, (&'static str)> {
-          let mut len: usize = 0;
-          let up: *mut usize = &mut len;
-          let bp: *mut u8 = up as *mut u8;
-          let mut buf = unsafe { std::slice::from_raw_parts_mut(bp, LEN_SIZE) };
-          match stream.read_exact(&mut buf) {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not read len"),
+          // Read length tag from message
+          let len = match stream.read_$lenType$::<LittleEndian>() {
+              Ok(l) => l as usize,
+              Err(_) => return Err("Could not read length tag"),
           };
-          let len = usize::from_le(len);
 
+          // Read finger print size, or how many bytes we will use
+          // to pattern match on to decide which type we're decoding
           let mut fingerprint = [0u8; FP_SIZE];
           match stream.read_exact(&mut fingerprint) {
               Ok(_) => (),
               Err(_) => return Err("Cound not read fingerprint"),
           };
+
+          // Construct the header
           Ok(Header {
               len: len,
               fingerprint: fingerprint,
@@ -93,14 +92,13 @@ genTester S.Specification {..} = [str|
 
 
       fn write(&self, stream: &mut Write) -> Result<(), &'static str> {
-          let len = usize::to_le(self.len);
-          let up: *const usize = &len;
-          let bp: *const u8 = up as *const u8;
-          let buf = unsafe { std::slice::from_raw_parts(bp, LEN_SIZE) };
-          match stream.write_all(&buf) {
+          // Write length tag
+          match stream.write_$lenType$::<LittleEndian>(self.len as $lenType$) {
               Ok(_) => (),
-              Err(_) => return Err("Cound not write len"),
+              Err(_) => return Err("Cound not write length tag"),
           };
+
+          // Write fingerprint bytes
           match stream.write_all(&self.fingerprint) {
               Ok(_) => (),
               Err(_) => return Err("Cound not write fingerprint"),
@@ -164,4 +162,4 @@ genTester S.Specification {..} = [str|
   where
     typeList = makeTypeList fpLen specTypes
     fpLen = specTypeLength
-    lenSize = C.sizeMax . C.tagToSize $ specLengthTag
+    lenType = T.pack $ U.cautTagToRustType specLengthTag
