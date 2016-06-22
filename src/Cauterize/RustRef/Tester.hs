@@ -29,7 +29,7 @@ genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
            let a = $typeName$::decode(&mut dctx).unwrap();
-           a.encode(&mut ectx).unwrap();
+           try!(a.encode(&mut ectx));
            let ebuf = ectx.consume();
            let message = Message {
                header: Header {
@@ -57,6 +57,25 @@ genTester S.Specification {..} = [str|
 
   const FP_SIZE: usize = $:fpLen$;
 
+  ##[derive(Debug)]
+  enum TestError {
+      Io(io::Error),
+      Cauterize(cauterize::Error),
+      Fingerprint,
+  }
+
+  impl From<io::Error> for TestError {
+       fn from(err: io::Error) -> TestError {
+          TestError::Io(err)
+      }
+  }
+
+  impl From<cauterize::Error> for TestError {
+       fn from(err: cauterize::Error) -> TestError {
+          TestError::Cauterize(err)
+      }
+  }
+
   ##[derive(Debug,Clone)]
   struct Header {
       len: usize,
@@ -64,41 +83,20 @@ genTester S.Specification {..} = [str|
   }
 
   impl Header {
-      fn read(stream: &mut Read) -> Result<Header, (&'static str)> {
-          // Read length tag from message
-          let len = match stream.$readLenTag$ {
-              Ok(l) => l as usize,
-              Err(_) => return Err("Could not read length tag"),
-          };
-
-          // Read finger print size, or how many bytes we will use
-          // to pattern match on to decide which type we're decoding
+      fn read(stream: &mut Read) -> Result<Header, TestError> {
+          let len = try!(stream.$readLenTag$);
           let mut fingerprint = [0u8; FP_SIZE];
-          match stream.read_exact(&mut fingerprint) {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not read fingerprint"),
-          };
-
-          // Construct the header
+          try!(stream.read_exact(&mut fingerprint));
           Ok(Header {
-              len: len,
+              len: len as usize,
               fingerprint: fingerprint,
           })
       }
 
 
-      fn write(&self, stream: &mut Write) -> Result<(), &'static str> {
-          // Write length tag
-          match stream.$writeLenTag$ {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not write length tag"),
-          };
-
-          // Write fingerprint bytes
-          match stream.write_all(&self.fingerprint) {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not write fingerprint"),
-          };
+      fn write(&self, stream: &mut Write) -> Result<(), TestError> {
+          try!(stream.$writeLenTag$);
+          try!(stream.write_all(&self.fingerprint));
           Ok(())
       }
   }
@@ -110,14 +108,11 @@ genTester S.Specification {..} = [str|
   }
 
   impl Message {
-      fn read(stream: &mut Read) -> Result<Message, &'static str> {
+      fn read(stream: &mut Read) -> Result<Message, TestError> {
           let header = try!(Header::read(stream));
           let mut payload = Vec::new();
           let mut chunk = stream.take(header.len as u64);
-          match chunk.read_to_end(&mut payload) {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not read payload"),
-          };
+          try!(chunk.read_to_end(&mut payload));
           let msg = Message {
               header: header,
               payload: payload,
@@ -125,17 +120,14 @@ genTester S.Specification {..} = [str|
           Ok(msg)
       }
 
-      fn write(&self, stream: &mut Write) -> Result<(), &'static str> {
+      fn write(&self, stream: &mut Write) -> Result<(), TestError> {
           try!(self.header.write(stream));
-          match stream.write_all(&self.payload) {
-              Ok(_) => (),
-              Err(_) => return Err("Cound not write payload"),
-          };
+          try!(stream.write_all(&self.payload));
           Ok(())
       }
   }
 
-  fn decode_then_encode(message: &Message) -> Result<Message, &'static str> {
+  fn decode_then_encode(message: &Message) -> Result<Message, TestError> {
       let mut dctx = cauterize::Decoder::new(message.payload.clone());
 
       let ebuf = Vec::new();
@@ -143,7 +135,7 @@ genTester S.Specification {..} = [str|
 
       match message.header.fingerprint {
           #t in typeList:$    genMatchArm t$#
-          _ => Err("Fingerprint not recognized"),
+          _ => Err(TestError::Fingerprint),
       }
   }
 
