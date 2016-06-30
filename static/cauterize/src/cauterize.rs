@@ -3,7 +3,6 @@ extern crate byteorder;
 use std::io::{Write, Read, Cursor};
 use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
-
 // **********************
 // Core types and traits
 // **********************
@@ -67,6 +66,69 @@ pub trait Range: Sized {
     fn get(&self) -> Self::P;
 }
 
+pub trait Vector: Sized {
+    type T: Sized;
+    const CAPACITY: usize;
+    fn new() -> Self;
+    fn push(&mut self, elem: Self::T) -> Option<Self::T>;
+}
+
+#[macro_export]
+macro_rules! impl_vector {
+    ($name:ident, $eltype:ident, $capacity:expr) => (
+        pub struct $name {
+            len: usize,
+            elems: [$eltype;$capacity],
+        }
+
+        impl Vector for $name {
+            type T = $eltype;
+            const CAPACITY: usize = $capacity;
+            fn new() -> $name {
+                use std::mem;
+                $name {
+                    len: 0,
+                    elems: unsafe { mem::uninitialized() },
+                }
+            }
+
+            fn push(&mut self, elem: $eltype) -> Option<$eltype> {
+                if self.len == $name::CAPACITY {
+                    return Some(elem);
+                }
+                self.elems[self.len] = elem;
+                self.len += 1;
+                None
+            }
+        }
+
+        // impl Cauterize for $name {
+        //     const FINGERPRINT: [u8; 20] = $fingerprint;
+        //     const SIZE_MIN: usize = $size_min;
+        //     const SIZE_MAX: usize = $size_max;
+
+        //     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        //         try!((self.len as $tagtype).encode(ctx));
+        //         for i in 0..self.len {
+        //             try!(self.elems[i].encode(ctx));
+        //         }
+        //         Ok(())
+        //     }
+
+        //     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
+        //         let len = try!($tagtype::decode(ctx)) as usize;
+        //         if len > $capacity {
+        //             return Err(Error::ElementCount);
+        //         }
+        //         let mut v = $name::new();
+        //         for _ in 0..len {
+        //             v.push(try!($eltype::decode(ctx)));
+        //         }
+        //         Ok(v)
+        //     }
+        // }
+    )
+}
 
 // ****************
 // Primitive impls

@@ -116,9 +116,6 @@ genUninitialized = genUnsafe $ s "mem::uninitialized()"
 genPrimTypeName :: C.Prim -> Doc
 genPrimTypeName = t . cautPrimToRustPrim
 
-genVec :: Doc -> Doc
-genVec d = s "Vec" <> angles d
-
 genNewType :: Doc -> Bool ->  Doc-> Doc
 genNewType nm pub tp  =
   s "pub struct" <+> nm <>  parens (visibility <> tp) <>  semi
@@ -195,8 +192,9 @@ genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   [ s "#![allow(dead_code,unused_variables,unused_imports)]"
   , s "#![feature(associated_consts)]"
   , empty
+  , s "#[macro_use]"
   , s "pub extern crate cauterize;"
-  , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range};"
+  , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range, Vector};"
   , s "use std::mem;"
   , empty
   , s "pub static SPEC_NAME: &'static str =" <+> dquotes (t specName) <> semi
@@ -256,10 +254,11 @@ genType S.Type {typeDesc = S.Array {..}, ..} =
     sz     = s $ show arrayLength
 
 genType S.Type {typeDesc = S.Vector {..}, ..} =
-  genNewType name True (genVec elType)
+  s "impl_vector!" <> parens (name <> comma <> elType <> comma <> capacity) <> semi
   where
-    name   = genTypeName typeName
-    elType = genTypeName vectorRef
+    name     = genTypeName typeName
+    elType   = genTypeName vectorRef
+    capacity = s . show $ vectorLength
 
 genType tp@S.Type {typeDesc = S.Union {..}, ..} =
   genEnum name fields
@@ -374,12 +373,11 @@ genEncodeInner S.Type {typeDesc = S.Array {}} =
        ]
 
 genEncodeInner S.Type {typeDesc = S.Vector {..}} = vcat
-  [ s "let len = self.0.len();"
-  , genIf (s "len >" <+> maxLen)
+  [ genIf (s "self.len >" <+> maxLen)
           (s "return Err(Error::ElementCount);")
-  , genTryEncode (parens (s "len as" <+> tagType)) <> semi
-  , genFor (s "elem in self.0.iter()")
-           (genTryEncode (s "elem"))
+  , genTryEncode (parens (s "self.len as" <+> tagType)) <> semi
+  , genFor (s "i in 0..self.len")
+           (genTryEncode (s "self.elems[i]"))
   , genOk genUnit
   ]
   where
@@ -495,12 +493,13 @@ genDecodeInner S.Type {typeDesc = S.Vector {..}, ..} =
   vcat [ s "let len =" <+> genTry (tagType <> s "::decode(ctx)") <+> s "as usize;"
        , genIf (s "len >" <+> maxLen)
          (s "return Err(Error::ElementCount);")
-       , s "let mut v: Vec" <> angles elType <+> s "= Vec::with_capacity(len);"
+       , s "let mut v =" <+> name <> s "::new();"
        , genFor (s "_ in 0..len")
          (s "v.push" <> parens (genTry (elType <> s "::decode(ctx)")) <> semi)
-       , genOk (genTypeName typeName <> parens (s "v"))
+       , genOk (s "v")
        ]
   where
+    name    = genTypeName typeName
     tagType = genTagTypeName vectorTag
     maxLen  = s $ show vectorLength
     elType  = genTypeName vectorRef
