@@ -6,15 +6,12 @@ module Cauterize.RustRef.Static
 import qualified Data.ByteString as B
 import           Data.FileEmbed
 
-
-cargoDotToml :: (FilePath, B.ByteString)
-cargoDotToml = ("cauterize/Cargo.toml", $(embedFile "static/cauterize/Cargo.toml"))
-
-cauterizeDotRs :: (FilePath, B.ByteString)
-cauterizeDotRs = ("cauterize/src/cauterize.rs", $(embedFile "static/cauterize/src/cauterize.rs"))
-
 allFiles :: [(FilePath, B.ByteString)]
 allFiles =
-  [ cauterizeDotRs
-  , cargoDotToml
+  [ ("cauterize/Cargo.toml", $(embedFile "static/cauterize/Cargo.toml"))
+  , ("cauterize/src/cauterize.rs", $(embedFile "static/cauterize/src/cauterize.rs"))
+  , ("cauterize/src/error.rs", $(embedFile "static/cauterize/src/error.rs"))
+  , ("cauterize/src/lib.rs", $(embedFile "static/cauterize/src/lib.rs"))
+  , ("cauterize/src/range.rs", $(embedFile "static/cauterize/src/range.rs"))
+  , ("cauterize/src/vector.rs", $(embedFile "static/cauterize/src/vector.rs"))
   ]
