@@ -216,14 +216,14 @@ genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
 ---------------------
 
 genType :: S.Type -> Doc
-genType S.Type {typeDesc = td@S.Range {..}, ..} =
-  vcat [ genNewType name False primType
-       , empty
-       , genRangeImpl name td
-       ]
+genType S.Type {typeDesc = S.Range {..}, ..} =
+  s "impl_range!" <> parens (name <> comma <> primType <> comma <> tagType <> comma <> offset <> comma <> len) <> semi
   where
     name     = genTypeName typeName
     primType = genPrimTypeName rangePrim
+    tagType  = genTagTypeName rangeTag
+    offset   = s . show $ rangeOffset
+    len      = s . show $ rangeLength
 
 genType tp@S.Type {typeDesc = S.Combination {..}, ..} =
   genStruct name fields
@@ -573,54 +573,3 @@ genDecodeInner S.Type {typeDesc = S.Union {..}, ..} =
         variantType = genTypeName (S.fieldRef field)
         variantName = genFieldName (S.fieldName field)
         idx = s (show (S.fieldIndex field))
-
-
------------------------------------
--- Other impls for certain types --
------------------------------------
-
-genRangeImpl :: Doc -> S.TypeDesc -> Doc
-genRangeImpl name td =
-  case td of
-    S.Range {..} ->
-      s "impl Range for" <+> name <+> genBlock
-      ( vcat
-        [ s "type P =" <+> primType <> semi
-        , s "type T =" <+> tagType <> semi
-        , s "const OFFSET:" <+> primType <+> equals <+> offset <> semi
-        , s "const LENGTH:" <+> primType <+> equals <+> len <> semi
-        , s "fn new(val: Self::P) -> Result<Self,Error>"
-          <+> genBlock
-          ( vcat [ s "if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH)"
-                   <+> genBlock (s "return" <+> genOk (name <> parens (s "val")) <> semi
-                                )
-                 , s "Err(Error::OutOfRange)"
-                 ]
-          )
-        , s "fn set" <> parens (s "&mut self, val:" <+> primType) <+> s "-> Option" <> angles primType
-          <+> genBlock
-          ( vcat [ s "if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH)"
-                   <+> genBlock (vcat [ s "self.0 = val;"
-                                      , s "return None;"
-                                      ]
-                                )
-                 , s "Some(val)"
-                 ]
-          )
-        , s "fn get(&self) ->" <+> primType <+> genBlock ( s "self.0")
-        ]
-      )
-      where
-        offset   = s . show $ rangeOffset
-        len      = s . show $ rangeLength
-        tagType  = genTagTypeName rangeTag
-        primType = genPrimTypeName rangePrim
-
-    _ -> error "Calling me with anything other than a Range makes no sense"
-
-
------------------------
--- Tester generation --
------------------------
-
--- 0100 dfc5 05
