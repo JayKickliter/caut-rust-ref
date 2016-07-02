@@ -1,33 +1,13 @@
 extern crate byteorder;
 use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
-use std::io::{Write, Read, Cursor};
+use std::io::{Write, Read};
 
 use error::Error;
 
+pub type Encoder = Write;
+pub type Decoder = Read;
+
 type CautEndian = LittleEndian;
-
-pub struct Decoder {
-    pub csr: Cursor<Vec<u8>>,
-}
-impl Decoder {
-    pub fn new(buf: Vec<u8>) -> Self {
-        Decoder { csr: Cursor::new(buf) }
-    }
-}
-
-pub struct Encoder {
-    pub csr: Cursor<Vec<u8>>,
-}
-impl Encoder {
-    pub fn new(buf: Vec<u8>) -> Self {
-        Encoder { csr: Cursor::new(buf) }
-    }
-
-    pub fn consume(self) -> Vec<u8> {
-        self.csr.into_inner()
-    }
-}
-
 
 pub trait Cauterize: 'static + Sized {
     const FINGERPRINT: [u8; 20];
@@ -51,14 +31,14 @@ pub trait Primitive: 'static + Sized {
 impl Primitive for u8 {
     fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
         let buf: &[u8] = &[*self];
-        match enc.csr.write(buf) {
+        match enc.write(buf) {
             Result::Ok(1) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
-        match ctx.csr.read(buf) {
+        match ctx.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0]),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -69,7 +49,7 @@ impl Primitive for u8 {
 impl Primitive for i8 {
     fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
         let buf: &[u8] = &[*self as u8];
-        match enc.csr.write(buf) {
+        match enc.write(buf) {
             Result::Ok(1) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
@@ -77,7 +57,7 @@ impl Primitive for i8 {
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
         let buf: &mut [u8] = &mut [0];
-        match ctx.csr.read(buf) {
+        match ctx.read(buf) {
             Result::Ok(_) => Result::Ok(buf[0] as i8),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -86,14 +66,14 @@ impl Primitive for i8 {
 
 impl Primitive for u16 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u16::<CautEndian>(*self) {
+        match ctx.write_u16::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u16::<CautEndian>() {
+        match ctx.read_u16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -102,14 +82,14 @@ impl Primitive for u16 {
 
 impl Primitive for i16 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i16::<CautEndian>(*self) {
+        match ctx.write_i16::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i16::<CautEndian>() {
+        match ctx.read_i16::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -118,14 +98,14 @@ impl Primitive for i16 {
 
 impl Primitive for u32 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u32::<CautEndian>(*self) {
+        match ctx.write_u32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u32::<CautEndian>() {
+        match ctx.read_u32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -134,14 +114,14 @@ impl Primitive for u32 {
 
 impl Primitive for i32 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i32::<CautEndian>(*self) {
+        match ctx.write_i32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i32::<CautEndian>() {
+        match ctx.read_i32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -150,14 +130,14 @@ impl Primitive for i32 {
 
 impl Primitive for u64 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_u64::<CautEndian>(*self) {
+        match ctx.write_u64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_u64::<CautEndian>() {
+        match ctx.read_u64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -166,14 +146,14 @@ impl Primitive for u64 {
 
 impl Primitive for i64 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_i64::<CautEndian>(*self) {
+        match ctx.write_i64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_i64::<CautEndian>() {
+        match ctx.read_i64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -182,14 +162,14 @@ impl Primitive for i64 {
 
 impl Primitive for f32 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_f32::<CautEndian>(*self) {
+        match ctx.write_f32::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_f32::<CautEndian>() {
+        match ctx.read_f32::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
@@ -198,14 +178,14 @@ impl Primitive for f32 {
 
 impl Primitive for f64 {
     fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
-        match ctx.csr.write_f64::<CautEndian>(*self) {
+        match ctx.write_f64::<CautEndian>(*self) {
             Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.csr.read_f64::<CautEndian>() {
+        match ctx.read_f64::<CautEndian>() {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }

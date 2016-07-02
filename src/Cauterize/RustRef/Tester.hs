@@ -30,7 +30,7 @@ genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
            let a = $typeName$::decode(&mut dctx).unwrap();
            try!(a.encode(&mut ectx));
-           let ebuf = ectx.consume();
+           let ebuf = ectx.into_inner();
            let message = Message {
                header: Header {
                    len: ebuf.len(),
@@ -128,10 +128,10 @@ genTester S.Specification {..} = [str|
   }
 
   fn decode_then_encode(message: &Message) -> Result<Message, TestError> {
-      let mut dctx = cauterize::Decoder::new(message.payload.clone());
+      let mut dctx = ::std::io::Cursor::new(message.payload.clone());
 
       let ebuf = Vec::new();
-      let mut ectx = cauterize::Encoder::new(ebuf);
+      let mut ectx = ::std::io::Cursor::new(ebuf);
 
       match message.header.fingerprint {
           #t in typeList:$    genMatchArm t$#
