@@ -3,5 +3,5 @@ matrix:
   include:
     - rust: "nightly"
 script:
-  - cargo build --verbose
-  - cargo test --verbose
+  - cargo build --verbose --manifest-path static/cauterize/Cargo.toml
+  - cargo test --verbose --manifest-path static/cauterize/Cargo.toml
