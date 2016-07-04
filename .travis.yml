@@ -1,7 +1,15 @@
-language: rust
-matrix:
-  include:
-    - rust: "nightly"
+language: c
+
+before_install:
+  - sudo apt-get install libgmp3-dev
+  - mkdir -p ~/.local/bin
+  - export PATH=$HOME/.local/bin:$PATH
+  - mkdir -p ~/.cargo/bin
+  - export PATH=$HOME/.cargo/bin:$PATH
+  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - stack setup
+  - rustup override set nightly
+
 script:
-  - cargo build --verbose --manifest-path static/cauterize/Cargo.toml
-  - cargo test --verbose --manifest-path static/cauterize/Cargo.toml
+  - make test

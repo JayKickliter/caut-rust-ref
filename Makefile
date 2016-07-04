@@ -1,8 +1,8 @@
 .phony: test clean
 
 test:
-	cargo test --manifest-path static/cauterize/Cargo.toml
 	stack build caut-rust-ref
+	cargo test --manifest-path static/cauterize/Cargo.toml
 	sh run_crucible.sh
 
 clean:
