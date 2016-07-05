@@ -9,4 +9,4 @@ stack exec crucible -- tester                                                   
   --schema-count=1                                                                           \
   --instance-count=1000                                                                      \
   --type-count=100                                                                           \
-  --enc-size=524288                                                                          \
+  --enc-size=8192                                                                            \

@@ -12,4 +12,6 @@ before_install:
   - rustup override set nightly
 
 script:
-  - make test
+  - stack build caut-rust-ref
+  - stack build crucible
+  - sh run_crucible.sh
