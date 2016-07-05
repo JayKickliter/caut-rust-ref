@@ -1,7 +1,21 @@
+sudo: false
+
 language: c
 
+cache:
+  directories:
+  - $HOME/.stack
+
+addons:
+  apt:
+    sources:
+    - hvr-ghc
+    packages:
+    - ghc-7.10.2
+    - libgmp3-dev
+
 before_install:
-  - sudo apt-get install libgmp3-dev
+  - export PATH=/opt/ghc/7.10.2/bin:$PATH
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - mkdir -p ~/.cargo/bin
@@ -12,6 +26,6 @@ before_install:
   - rustup override set nightly
 
 script:
-  - stack build caut-rust-ref
-  - stack build crucible
+  - stack --skip-ghc-check install caut-rust-ref
+  - stack --skip-ghc-check install crucible
   - sh run_crucible.sh
