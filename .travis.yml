@@ -1,17 +1,24 @@
+# This informs travis to use a docker container
 sudo: false
 
-language: c
-
+# Since we're using a container, we can cache specified directories
+# Specifally, let's cache haskell-stack related stuff since it's slow to rebuild
 cache:
   directories:
   - $HOME/.stack
 
+# Just use `c` since we're going to download Haskell and Rust compilers via stack and rustup
+language: c
+
+# Since this container cand't sudo, we need to specify additional packages to install
 addons:
   apt:
     sources:
     - hvr-ghc
     packages:
+    # haskell compiler
     - ghc-7.10.2
+    # needed by some haskell package
     - libgmp3-dev
 
 before_install:
