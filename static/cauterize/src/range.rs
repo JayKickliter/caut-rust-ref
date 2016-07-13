@@ -1,39 +1,52 @@
 use error;
 
-pub trait Range: Sized {
-    type P;
-    type T;
-    const OFFSET: Self::P;
-    const LENGTH: Self::P;
-    fn new(val: Self::P) -> Result<Self, error::Error>;
-    fn set(&mut self, val: Self::P) -> Option<Self::P>;
-    fn get(&self) -> Self::P;
+/// A trait that represents a value that can only withing a certain range.
+pub trait Range: Sized + Copy {
+    /// Primitive type used to store the value.
+    type Prim;
+    /// Tag type which is the minimum sized
+    type Tag;
+    /// Lower bound, or the minimum value the range can represent.
+    const OFFSET: Self::Prim;
+    /// OFFSET + LENGTH is the upper bound, or the maximum value the range can represent.
+    const LENGTH: Self::Prim;
+
+    /// Create a new range object from it's primitive type.
+    fn new(val: Self::Prim) -> Result<Self, error::Error>;
+    /// Change the value of a range object.
+    fn set(&mut self, val: Self::Prim) -> Option<Self::Prim>;
+    /// Get the value of a range object.
+    fn get(&self) -> Self::Prim;
 }
 
 #[macro_export]
 macro_rules! impl_range {
-    ($name:ident, $rep_type:ty, $tag_type:ty, $offset:expr, $length:expr) => (
-        pub struct $name($rep_type);
+    ($name:ident, $prim_type:ty, $tag_type:ty, $offset:expr, $length:expr) => (
+        #[derive(Debug, Clone, Copy)]
+        pub struct $name($prim_type);
 
         impl Range for $name {
-            type P = $rep_type;
-            type T = $tag_type;
-            const OFFSET: $rep_type = $offset;
-            const LENGTH: $rep_type = $length;
-            fn new(val: Self::P) -> Result<Self,Error> {
+            type Prim = $prim_type;
+            type Tag = $tag_type;
+            const OFFSET: $prim_type = $offset;
+            const LENGTH: $prim_type = $length;
+
+            fn new(val: Self::Prim) -> Result<Self, Error> {
                 if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH) {
                     return Ok($name(val));
                 }
                 Err(Error::OutOfRange)
             }
-            fn set(&mut self, val: Self::P) -> Option<Self::P> {
-                if (Self::OFFSET <= val) && (val <= Self::OFFSET + Self::LENGTH) {
+
+            fn set(&mut self, val: Self::Prim) -> Option<Self::Prim> {
+                if (Self::OFFSET < val) && (val < Self::OFFSET + Self::LENGTH) {
                     self.0 = val;
                     return None;
                 }
                 Some(val)
             }
-            fn get(&self) -> Self::P {
+
+            fn get(&self) -> Self::Prim {
                 self.0
             }
         }
