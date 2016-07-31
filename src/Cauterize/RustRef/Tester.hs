@@ -28,7 +28,7 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
-           let a = $typeName$::decode(&mut dctx).unwrap();
+           let a = try!($typeName$::decode(&mut dctx));
            try!(a.encode(&mut ectx));
            let ebuf = ectx.into_inner();
            let message = Message {
@@ -139,12 +139,18 @@ genTester S.Specification {..} = [str|
       }
   }
 
-
-
-  fn main() {
+  fn tester() {
       let decoded_message = Message::read(&mut io::stdin()).unwrap();
       let encoded_message = decode_then_encode(&decoded_message).unwrap();
-      encoded_message.write(&mut io::stdout()).unwrap()
+      encoded_message.write(&mut io::stdout()).unwrap();
+  }
+
+  fn main() {
+      let t = ::std::thread::Builder::new()
+          .stack_size(1024 * 1024 * 16)
+          .spawn(tester)
+          .unwrap();
+      t.join().unwrap();
   }
   |]
   where
