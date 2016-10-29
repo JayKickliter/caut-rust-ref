@@ -23,23 +23,20 @@ pub trait Primitive: 'static + Sized {
 }
 
 
-
 // ****************
 // Primitive impls
 // ****************
 
 impl Primitive for u8 {
     fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
-        let buf: &[u8] = &[*self];
-        match enc.write(buf) {
-            Result::Ok(1) => Result::Ok(()),
+        match enc.write_u8(*self) {
+            Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        let buf: &mut [u8] = &mut [0];
-        match ctx.read(buf) {
-            Result::Ok(_) => Result::Ok(buf[0]),
+        match ctx.read_u8() {
+            Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
 
@@ -48,19 +45,17 @@ impl Primitive for u8 {
 
 impl Primitive for i8 {
     fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
-        let buf: &[u8] = &[*self as u8];
-        match enc.write(buf) {
-            Result::Ok(1) => Result::Ok(()),
+        match enc.write_i8(*self) {
+            Result::Ok(()) => Result::Ok(()),
             _ => Result::Err(Error::Encode),
         }
     }
-
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        let buf: &mut [u8] = &mut [0];
-        match ctx.read(buf) {
-            Result::Ok(_) => Result::Ok(buf[0] as i8),
+        match ctx.read_i8() {
+            Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
+
     }
 }
 
