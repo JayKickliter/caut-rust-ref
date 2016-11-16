@@ -28,8 +28,8 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
-           let a = try!($typeName$::decode(&mut dctx));
-           try!(a.encode(&mut ectx));
+           let a = $typeName$::decode(&mut dctx)?;
+           a.encode(&mut ectx)?;
            let ebuf = ectx.into_inner();
            let message = Message {
                header: Header {
@@ -84,9 +84,9 @@ genTester S.Specification {..} = [str|
 
   impl Header {
       fn read(stream: &mut Read) -> Result<Header, TestError> {
-          let len = try!(stream.$readLenTag$);
+          let len = stream.$readLenTag$?;
           let mut fingerprint = [0u8; FP_SIZE];
-          try!(stream.read_exact(&mut fingerprint));
+          stream.read_exact(&mut fingerprint)?;
           Ok(Header {
               len: len as usize,
               fingerprint: fingerprint,
@@ -95,8 +95,8 @@ genTester S.Specification {..} = [str|
 
 
       fn write(&self, stream: &mut Write) -> Result<(), TestError> {
-          try!(stream.$writeLenTag$);
-          try!(stream.write_all(&self.fingerprint));
+          stream.$writeLenTag$?;
+          stream.write_all(&self.fingerprint)?;
           Ok(())
       }
   }
@@ -109,10 +109,10 @@ genTester S.Specification {..} = [str|
 
   impl Message {
       fn read(stream: &mut Read) -> Result<Message, TestError> {
-          let header = try!(Header::read(stream));
+          let header = Header::read(stream)?;
           let mut payload = Vec::new();
           let mut chunk = stream.take(header.len as u64);
-          try!(chunk.read_to_end(&mut payload));
+          chunk.read_to_end(&mut payload)?;
           let msg = Message {
               header: header,
               payload: payload,
@@ -121,8 +121,8 @@ genTester S.Specification {..} = [str|
       }
 
       fn write(&self, stream: &mut Write) -> Result<(), TestError> {
-          try!(self.header.write(stream));
-          try!(stream.write_all(&self.payload));
+          self.header.write(stream)?;
+          stream.write_all(&self.payload)?;
           Ok(())
       }
   }

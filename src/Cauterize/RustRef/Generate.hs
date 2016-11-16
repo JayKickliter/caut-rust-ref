@@ -53,7 +53,7 @@ genUnsafe :: Doc -> Doc
 genUnsafe d = s "unsafe" <+> braces (space <> d <> space)
 
 genTry :: Doc -> Doc
-genTry d = s "try!" <> parens d
+genTry d = d <> s "?"
 
 genOk :: Doc -> Doc
 genOk d = s "Ok" <> parens d
