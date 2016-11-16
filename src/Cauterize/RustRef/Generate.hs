@@ -164,6 +164,8 @@ genManifest spec =
          , s "[lib]"
          , s "name =" <+> dquotes specName
          , s "path =" <+> dquotes (s "src/" <> specName <> s ".rs")
+         , s "# See https://github.com/rust-lang/rust/issues/21246"
+         , s "doctest = false"
          , empty
          , s "[[bin]]"
          , s "name = \"tester\""
