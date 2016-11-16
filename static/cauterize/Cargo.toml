@@ -11,4 +11,3 @@ byteorder = "0.5"
 
 [dev-dependencies]
 quickcheck = "*"
-quickcheck_macros = "*"

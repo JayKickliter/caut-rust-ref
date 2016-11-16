@@ -1,9 +1,6 @@
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(quickcheck_macros))]
 #![feature(associated_consts)]
 #[macro_use]
 extern crate quickcheck;
-use self::quickcheck::*;
 extern crate cauterize;
 use cauterize::*;
 use std::io::Cursor;
@@ -101,8 +98,8 @@ impl Cauterize for CautPrim {
     }
 }
 
-impl Arbitrary for CautPrim {
-    fn arbitrary<G: Gen>(g: &mut G) -> CautPrim {
+impl quickcheck::Arbitrary for CautPrim {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> CautPrim {
         let arm = g.gen::<usize>() % 10;
         match arm {
             0 => CautPrim::U8(g.gen()),
@@ -119,19 +116,20 @@ impl Arbitrary for CautPrim {
     }
 }
 
-#[quickcheck]
-fn caut_prim_round_trip(items: Vec<CautPrim>) -> bool {
-    let buf: Vec<u8> = Vec::new();
-    let mut ctx = Cursor::new(buf);
-    for item in &items {
-        item.encode(&mut ctx).unwrap();
-    }
+quickcheck! {
+    fn caut_prim_round_trip(items: Vec<CautPrim>) -> bool {
+        let buf: Vec<u8> = Vec::new();
+        let mut ctx = Cursor::new(buf);
+        for item in &items {
+            item.encode(&mut ctx).unwrap();
+        }
 
-    let buf = ctx.into_inner();
-    let mut ctx = Cursor::new(buf);
-    let mut decoded: Vec<CautPrim> = Vec::new();
-    for _ in 0..items.len() {
-        &decoded.push(CautPrim::decode(&mut ctx).unwrap());
+        let buf = ctx.into_inner();
+        let mut ctx = Cursor::new(buf);
+        let mut decoded: Vec<CautPrim> = Vec::new();
+        for _ in 0..items.len() {
+            &decoded.push(CautPrim::decode(&mut ctx).unwrap());
+        }
+        decoded == items
     }
-    decoded == items
 }
