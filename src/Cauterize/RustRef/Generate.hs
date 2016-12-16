@@ -117,22 +117,26 @@ genPrimTypeName :: C.Prim -> Doc
 genPrimTypeName = t . cautPrimToRustPrim
 
 genNewType :: Doc -> Bool ->  Doc-> Doc
-genNewType nm pub tp  =
-  s "pub struct" <+> nm <>  parens (visibility <> tp) <>  semi
+genNewType nm pub tp  = vcat
+  [ s "#[derive(Debug, Clone, PartialEq)]"
+  , s "pub struct" <+> nm <>  parens (visibility <> tp) <>  semi
+  ]
   where
     visibility | pub == True = s "pub "
                | otherwise   = empty
 
 genEnum :: Doc -> [Doc] -> Doc
 genEnum nm fields = vcat
-  [ s "pub enum" <+> nm <+> lbrace
+  [ s "#[derive(Debug, Clone, PartialEq)]"
+  , s "pub enum" <+> nm <+> lbrace
   , indent (vcat fields)
   , rbrace
   ]
 
 genStruct :: Doc -> [Doc] -> Doc
 genStruct nm fields = vcat
-  [ s "pub struct" <+> nm <+> lbrace
+  [ s "#[derive(Debug, Clone, PartialEq)]"
+  , s "pub struct" <+> nm <+> lbrace
   , indent (vcat fields)
   , rbrace
   ]
