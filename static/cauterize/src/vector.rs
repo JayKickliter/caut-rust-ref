@@ -39,7 +39,7 @@
 /// ```
 pub trait Vector<'a>: Sized {
     /// Element type.
-    type T: Sized;
+    type T: Sized + ::std::fmt::Debug + Clone + PartialEq + Eq;
 
     /// Maximum length.
     const CAPACITY: usize;
@@ -124,5 +124,37 @@ macro_rules! impl_vector {
                 self.elems[..self.len].iter_mut()
             }
         }
+
+        impl AsRef<[$eltype]> for $name {
+            fn as_ref(&self) -> &[$eltype] {
+                use std;
+                unsafe {
+                    std::slice::from_raw_parts(&self.elems as *const $eltype, self.len)
+                }
+            }
+        }
+
+        impl ::std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                ::std::fmt::Debug::fmt(self.as_ref(), f)
+            }
+        }
    )
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::Vector;
+
+    #[test]
+    fn test_vector() {
+        impl_vector!(Vector32u8, u8, 32);
+
+        let mut test_vector = Vector32u8::new();
+        for i in 0..test_vector.capacity() {
+            test_vector.push(i as u8);
+        }
+        println!("{:?}", test_vector);
+    }
 }
