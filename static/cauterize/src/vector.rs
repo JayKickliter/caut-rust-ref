@@ -39,7 +39,7 @@
 /// ```
 pub trait Vector<'a>: Sized {
     /// Element type.
-    type T: Sized + ::std::fmt::Debug + Clone + PartialEq + Eq;
+    type T: Sized + ::std::fmt::Debug + Clone + PartialEq;
 
     /// Maximum length.
     const CAPACITY: usize;
@@ -139,7 +139,23 @@ macro_rules! impl_vector {
                 ::std::fmt::Debug::fmt(self.as_ref(), f)
             }
         }
-   )
+
+        impl ::std::cmp::PartialEq for $name {
+            fn eq(&self, other: &$name) -> bool {
+                self.as_ref() == other.as_ref()
+            }
+        }
+
+        impl Clone for $name {
+            fn clone(&self) -> $name {
+                let mut cloned = $name::new();
+                for elem in self {
+                    cloned.push(elem.clone());
+                }
+                cloned
+            }
+        }
+    )
 }
 
 
@@ -156,5 +172,7 @@ mod tests {
             test_vector.push(i as u8);
         }
         println!("{:?}", test_vector);
+
+        assert_eq!(test_vector, test_vector.clone());
     }
 }
