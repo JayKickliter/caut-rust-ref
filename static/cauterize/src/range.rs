@@ -22,7 +22,7 @@ pub trait Range: Sized + Copy {
 #[macro_export]
 macro_rules! impl_range {
     ($name:ident, $prim_type:ty, $tag_type:ty, $offset:expr, $length:expr) => (
-        #[derive(Debug, Clone, Copy, ParialEq, Eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub struct $name($prim_type);
 
         impl Range for $name {
@@ -51,4 +51,21 @@ macro_rules! impl_range {
             }
         }
     )
+}
+
+
+#[cfg(test)]
+mod test {
+    use ::error::Error;
+    use ::range::Range;
+    #[test]
+    fn test_range() {
+        impl_range!(Rangeu8, u16, u8, 100, 155);
+        let mut test_range = Rangeu8::new(100).unwrap();
+        assert_eq!(test_range.set(99), Some(99));
+        assert_eq!(test_range.set(254), None);
+        assert_eq!(test_range.set(256), Some(256));
+        assert_eq!(Rangeu8::new(100), Ok(Rangeu8(100)));
+        println!("{:?}", test_range);
+    }
 }
