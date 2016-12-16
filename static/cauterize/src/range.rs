@@ -22,7 +22,7 @@ pub trait Range: Sized + Copy {
 #[macro_export]
 macro_rules! impl_range {
     ($name:ident, $prim_type:ty, $tag_type:ty, $offset:expr, $length:expr) => (
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone, Copy, ParialEq, Eq)]
         pub struct $name($prim_type);
 
         impl Range for $name {
