@@ -11,3 +11,5 @@ pub use vector::Vector;
 
 mod range;
 pub use range::Range;
+
+mod array;

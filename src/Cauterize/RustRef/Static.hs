@@ -14,4 +14,5 @@ allFiles =
   , ("cauterize/src/lib.rs", $(embedFile "static/cauterize/src/lib.rs"))
   , ("cauterize/src/range.rs", $(embedFile "static/cauterize/src/range.rs"))
   , ("cauterize/src/vector.rs", $(embedFile "static/cauterize/src/vector.rs"))
+  , ("cauterize/src/array.rs", $(embedFile "static/cauterize/src/array.rs"))
   ]

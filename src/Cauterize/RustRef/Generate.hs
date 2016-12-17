@@ -253,7 +253,7 @@ genType tp@S.Type {typeDesc = S.Enumeration {..}, ..} =
     tagType = genTagTypeName  enumerationTag
 
 genType S.Type {typeDesc = S.Array {..}, ..} =
-  genNewType name True (brackets $ elType <> semi <+> sz)
+  s "impl_array!" <> parens (name <> comma <> elType <> comma <> sz) <> semi
   where
     name   = genTypeName typeName
     elType = genTypeName arrayRef
