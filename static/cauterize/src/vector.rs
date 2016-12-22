@@ -137,15 +137,6 @@ macro_rules! impl_vector {
             }
         }
 
-        impl Drop for $name {
-            fn drop(&mut self) {
-                for elem in self.as_ref() {
-                    drop(elem);
-                }
-                ::std::mem::forget(self.elems);
-            }
-        }
-
         impl ::std::fmt::Debug for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 ::std::fmt::Debug::fmt(self.as_ref(), f)
