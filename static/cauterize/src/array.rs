@@ -53,12 +53,11 @@ macro_rules! impl_array {
 
         impl Clone for $name {
             fn clone(&self) -> $name {
-                use std::mem;
+                use std::ptr;
                 let mut inner: [$eltype;$len] = unsafe { ::std::mem::uninitialized()};
 
                 for (i,s) in inner.iter_mut().zip(self.as_ref().iter()) {
-                    let tmp = mem::replace(i, s.clone());
-                    mem::forget(tmp);
+                    unsafe { ptr::write(i, s.clone()) };
                 }
                 $name(inner)
             }
@@ -69,11 +68,10 @@ macro_rules! impl_array {
 
 #[cfg(test)]
 mod tests {
-    // use array;
     #[test]
     fn test_array() {
-        impl_array!(TestArray, u32, 12);
-        let mut test_array: TestArray = [0u32; 12].into();
+        impl_array!(TestArray, u32, 1111);
+        let mut test_array: TestArray = [0u32; 1111].into();
 
         // Test AsRef, AsMut, and iterating
         for elem in test_array.as_mut().iter_mut() {
@@ -83,7 +81,7 @@ mod tests {
         // Test Debug
         println!("{:?}", test_array);
 
-        // Test equality
+        // Test clone and Eq
         let test_array_cloned = test_array.clone();
         assert_eq!(test_array, test_array_cloned);
     }
