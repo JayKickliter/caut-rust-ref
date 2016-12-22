@@ -37,7 +37,7 @@
 /// }
 /// # }
 /// ```
-pub trait Vector<'a>: Sized {
+pub trait Vector: Sized {
     /// Element type.
     type T: Sized + ::std::fmt::Debug + Clone + PartialEq;
 
@@ -59,10 +59,10 @@ pub trait Vector<'a>: Sized {
     }
 
     /// Returns an immutable iterator over elements in the vector.
-    fn iter(&'a self) -> ::std::slice::Iter<'a, Self::T>;
+    fn iter<'a>(&'a self) -> ::std::slice::Iter<'a, Self::T>;
 
     /// Returns a mutable iterator over elements in the vector.
-    fn iter_mut(&'a mut self) -> ::std::slice::IterMut<'a, Self::T>;
+    fn iter_mut<'a>(&'a mut self) -> ::std::slice::IterMut<'a, Self::T>;
 }
 
 #[macro_export]
@@ -91,7 +91,7 @@ macro_rules! impl_vector {
             }
         }
 
-        impl<'a> Vector<'a> for $name {
+        impl Vector for $name {
             type T = $eltype;
             const CAPACITY: usize = $capacity;
             fn new() -> $name {
@@ -116,11 +116,11 @@ macro_rules! impl_vector {
                 self.len
             }
 
-            fn iter(&'a self) -> ::std::slice::Iter<'a, $eltype> {
+            fn iter<'a>(&'a self) -> ::std::slice::Iter<'a, $eltype> {
                 self.elems[..self.len].iter()
             }
 
-            fn iter_mut(&'a mut self) -> ::std::slice::IterMut<'a, $eltype> {
+            fn iter_mut<'a>(&'a mut self) -> ::std::slice::IterMut<'a, $eltype> {
                 self.elems[..self.len].iter_mut()
             }
         }
