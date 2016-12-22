@@ -107,8 +107,11 @@ macro_rules! impl_vector {
                 if self.len == $name::CAPACITY {
                     return Some(elem);
                 }
-                self.elems[self.len] = elem;
-                self.len += 1;
+                unsafe {
+                    let end = self.elems.as_mut_ptr().offset(self.len as isize);
+                    ::std::ptr::write(end, elem);
+                    self.len += 1;
+                }
                 None
             }
 
