@@ -58,10 +58,10 @@ pub trait Vector: Sized {
     }
 
     /// Returns an immutable iterator over elements in the vector.
-    fn iter<'a>(&'a self) -> ::std::slice::Iter<'a, Self::T>;
+    fn iter(&self) -> ::std::slice::Iter<Self::T>;
 
     /// Returns a mutable iterator over elements in the vector.
-    fn iter_mut<'a>(&'a mut self) -> ::std::slice::IterMut<'a, Self::T>;
+    fn iter_mut(&mut self) -> ::std::slice::IterMut<Self::T>;
 }
 
 #[macro_export]
