@@ -21,7 +21,7 @@ library
                      , Cauterize.RustRef.Static
                      , Cauterize.RustRef.Tester
   build-depends:       base >= 4.7 && < 5
-                     , cauterize >= 0.1.0.0
+                     , cauterize >= 1.1.0.0
                      , text
                      , wl-pprint
                      , bytestring
@@ -36,7 +36,7 @@ executable caut-rust-ref
   other-modules:       Cauterize.RustRef.Options
   build-depends:       base
                      , caut-rust-ref
-                     , cauterize >= 0.1.0.0
+                     , cauterize >= 1.1.0.0
                      , optparse-applicative
                      , directory
                      , filepath
