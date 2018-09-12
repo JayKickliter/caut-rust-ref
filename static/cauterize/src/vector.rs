@@ -5,7 +5,6 @@
 /// # Examples
 ///
 /// ```
-/// # #![feature(associated_consts)]
 /// # #[macro_use] extern crate cauterize;
 /// # use cauterize::Vector;
 /// # fn main() {

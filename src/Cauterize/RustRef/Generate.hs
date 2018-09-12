@@ -196,7 +196,6 @@ genRust = T.pack . genSource
 genSource :: S.Specification -> String
 genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
   [ s "#![allow(dead_code,unused_variables,unused_imports)]"
-  , s "#![feature(associated_consts)]"
   , empty
   , s "#[macro_use]"
   , s "pub extern crate cauterize;"

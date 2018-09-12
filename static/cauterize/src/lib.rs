@@ -1,5 +1,3 @@
-#![feature(associated_consts)]
-
 mod cauterize;
 pub use cauterize::*;
 

@@ -44,7 +44,6 @@ genMatchArm (typeName, pattern) =
 
 genTester :: S.Specification -> T.Text
 genTester S.Specification {..} = [str|
-  ##![feature(slice_patterns)]
   ##![allow(unused_imports)]
   use std::io;
   use std::io::{Read, Write};

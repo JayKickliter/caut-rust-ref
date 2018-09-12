@@ -1,4 +1,3 @@
-#![feature(associated_consts)]
 #[macro_use]
 extern crate quickcheck;
 extern crate cauterize;
