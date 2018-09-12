@@ -24,18 +24,18 @@ impl Cauterize for CautPrim {
     const SIZE_MAX: usize = 0;
 
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        let tag = try!(u8::decode(ctx));
+        let tag = u8::decode(ctx)?;
         match tag {
-            0 => Ok(CautPrim::U8(try!(u8::decode(ctx)))),
-            1 => Ok(CautPrim::I8(try!(i8::decode(ctx)))),
-            2 => Ok(CautPrim::U16(try!(u16::decode(ctx)))),
-            3 => Ok(CautPrim::I16(try!(i16::decode(ctx)))),
-            4 => Ok(CautPrim::U32(try!(u32::decode(ctx)))),
-            5 => Ok(CautPrim::I32(try!(i32::decode(ctx)))),
-            6 => Ok(CautPrim::U64(try!(u64::decode(ctx)))),
-            7 => Ok(CautPrim::I64(try!(i64::decode(ctx)))),
-            8 => Ok(CautPrim::F32(try!(f32::decode(ctx)))),
-            9 => Ok(CautPrim::F64(try!(f64::decode(ctx)))),
+            0 => Ok(CautPrim::U8(u8::decode(ctx)))?,
+            1 => Ok(CautPrim::I8(i8::decode(ctx)))?,
+            2 => Ok(CautPrim::U16(u16::decode(ctx)))?,
+            3 => Ok(CautPrim::I16(i16::decode(ctx)))?,
+            4 => Ok(CautPrim::U32(u32::decode(ctx)))?,
+            5 => Ok(CautPrim::I32(i32::decode(ctx)))?,
+            6 => Ok(CautPrim::U64(u64::decode(ctx)))?,
+            7 => Ok(CautPrim::I64(i64::decode(ctx)))?,
+            8 => Ok(CautPrim::F32(f32::decode(ctx)))?,
+            9 => Ok(CautPrim::F64(f64::decode(ctx)))?,
             _ => Err(Error::InvalidTag),
         }
     }
@@ -44,53 +44,53 @@ impl Cauterize for CautPrim {
         match self {
             &CautPrim::U8(ref val) => {
                 let tag: u8 = 0;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::I8(ref val) => {
                 let tag: u8 = 1;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::U16(ref val) => {
                 let tag: u8 = 2;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::I16(ref val) => {
                 let tag: u8 = 3;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::U32(ref val) => {
                 let tag: u8 = 4;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::I32(ref val) => {
                 let tag: u8 = 5;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::U64(ref val) => {
                 let tag: u8 = 6;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::I64(ref val) => {
                 let tag: u8 = 7;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::F32(ref val) => {
                 let tag: u8 = 8;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
             &CautPrim::F64(ref val) => {
                 let tag: u8 = 9;
-                try!(tag.encode(ctx));
-                try!(val.encode(ctx));
+                tag.encode(ctx)?;
+                val.encode(ctx)?;
             }
         };
         Ok(())

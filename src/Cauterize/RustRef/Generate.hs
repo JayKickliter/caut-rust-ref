@@ -373,7 +373,7 @@ genEncodeInner S.Type {typeDesc = S.Range {..}, ..} =
 
 genEncodeInner S.Type {typeDesc = S.Array {}} =
   vcat [ s "let ref elems = self.0;"
-       , genFor (s "elem in elems.iter()") (s "try!(elem.encode(ctx));")
+       , genFor (s "elem in elems.iter()") (s "elem.encode(ctx)?;")
        , genOk genUnit
        ]
 
@@ -391,7 +391,7 @@ genEncodeInner S.Type {typeDesc = S.Vector {..}} = vcat
 
 genEncodeInner S.Type {typeDesc = S.Enumeration {..}} =
   vcat [ s "let tag: &" <> tagType <+> s "= unsafe { mem::transmute(self) };"
-       , s "try!(tag.encode(ctx));"
+       , s "tag.encode(ctx)?;"
        , genOk genUnit
        ]
   where
