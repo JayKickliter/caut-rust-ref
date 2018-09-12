@@ -4,7 +4,7 @@ extern crate cauterize;
 use cauterize::*;
 use std::io::Cursor;
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum CautPrim {
     U8(u8),
     I8(i8),

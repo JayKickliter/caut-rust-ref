@@ -21,7 +21,7 @@ pub trait Range: Sized + Copy {
 
 #[macro_export]
 macro_rules! impl_range {
-    ($name:ident, $prim_type:ty, $tag_type:ty, $offset:expr, $length:expr) => (
+    ($name:ident, $prim_type:ty, $tag_type:ty, $offset:expr, $length:expr) => {
         #[derive(Debug, Clone, Copy, PartialEq)]
         pub struct $name($prim_type);
 
@@ -50,14 +50,13 @@ macro_rules! impl_range {
                 self.0
             }
         }
-    )
+    };
 }
-
 
 #[cfg(test)]
 mod test {
-    use ::error::Error;
-    use ::range::Range;
+    use error::Error;
+    use range::Range;
     #[test]
     fn test_range() {
         impl_range!(Rangeu8, u16, u8, 100, 155);

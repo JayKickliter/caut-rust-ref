@@ -1,10 +1,10 @@
 #[macro_export]
 macro_rules! impl_array {
-    ($name:ident, $eltype:ident, $len:expr) => (
-        pub struct $name(pub [$eltype;$len]);
+    ($name:ident, $eltype:ident, $len:expr) => {
+        pub struct $name(pub [$eltype; $len]);
 
-        impl From<[$eltype;$len]> for $name {
-            fn from(a: [$eltype;$len]) -> $name {
+        impl From<[$eltype; $len]> for $name {
+            fn from(a: [$eltype; $len]) -> $name {
                 $name(a)
             }
         }
@@ -54,17 +54,16 @@ macro_rules! impl_array {
         impl Clone for $name {
             fn clone(&self) -> $name {
                 use std::ptr;
-                let mut inner: [$eltype;$len] = unsafe { ::std::mem::uninitialized()};
+                let mut inner: [$eltype; $len] = unsafe { ::std::mem::uninitialized() };
 
-                for (i,s) in inner.iter_mut().zip(self.as_ref().iter()) {
+                for (i, s) in inner.iter_mut().zip(self.as_ref().iter()) {
                     unsafe { ptr::write(i, s.clone()) };
                 }
                 $name(inner)
             }
         }
-    )
+    };
 }
-
 
 #[cfg(test)]
 mod tests {

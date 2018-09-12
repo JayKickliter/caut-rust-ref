@@ -66,10 +66,10 @@ pub trait Vector: Sized {
 
 #[macro_export]
 macro_rules! impl_vector {
-    ($name:ident, $eltype:ident, $capacity:expr) => (
+    ($name:ident, $eltype:ident, $capacity:expr) => {
         pub struct $name {
             len: usize,
-            elems: [$eltype;$capacity],
+            elems: [$eltype; $capacity],
         }
 
         impl<'a> IntoIterator for &'a $name {
@@ -130,9 +130,7 @@ macro_rules! impl_vector {
         impl AsRef<[$eltype]> for $name {
             fn as_ref(&self) -> &[$eltype] {
                 use std;
-                unsafe {
-                    std::slice::from_raw_parts(&self.elems as *const $eltype, self.len)
-                }
+                unsafe { std::slice::from_raw_parts(&self.elems as *const $eltype, self.len) }
             }
         }
 
@@ -157,9 +155,8 @@ macro_rules! impl_vector {
                 cloned
             }
         }
-    )
+    };
 }
-
 
 #[cfg(test)]
 mod tests {

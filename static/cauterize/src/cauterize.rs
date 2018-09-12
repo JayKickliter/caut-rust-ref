@@ -1,6 +1,6 @@
 extern crate byteorder;
-use self::byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
-use std::io::{Write, Read};
+use self::byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{Read, Write};
 
 use error::Error;
 
@@ -22,13 +22,12 @@ pub trait Primitive: 'static + Sized {
     fn decode(&mut Decoder) -> Result<Self, Error>;
 }
 
-
 // ****************
 // Primitive impls
 // ****************
 
 macro_rules! impl_primitive {
-    ($T:ty, $FR:ident, $FW:ident) => (
+    ($T:ty, $FR:ident, $FW:ident) => {
         impl Primitive for $T {
             fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
                 match enc.$FW::<CautEndian>(*self) {
@@ -43,7 +42,7 @@ macro_rules! impl_primitive {
                 }
             }
         }
-    );
+    };
 }
 
 impl_primitive!(u16, read_u16, write_u16);
@@ -54,7 +53,6 @@ impl_primitive!(u64, read_u64, write_u64);
 impl_primitive!(i64, read_i64, write_i64);
 impl_primitive!(f32, read_f32, write_f32);
 impl_primitive!(f64, read_f64, write_f64);
-
 
 // We can't use `impl_primitive!` for u8/i8 since it read/write for u8/i8 does not take paramters
 impl Primitive for u8 {
@@ -84,10 +82,8 @@ impl Primitive for i8 {
             Result::Ok(val) => Result::Ok(val),
             Result::Err(_) => Result::Err(Error::Decode),
         }
-
     }
 }
-
 
 // We can't use `impl_primitive!` for bool since it
 impl Primitive for bool {
@@ -103,6 +99,5 @@ impl Primitive for bool {
             Err(e) => Err(e),
             _ => Err(Error::InvalidValue),
         }
-
     }
 }

@@ -1,4 +1,4 @@
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Encode,
     Decode,
