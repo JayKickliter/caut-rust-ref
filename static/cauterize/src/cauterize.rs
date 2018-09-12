@@ -1,13 +1,43 @@
-extern crate byteorder;
-use self::byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Read, Write};
-
+use byteorder::{ByteOrder, LittleEndian};
 use error::Error;
 
-pub type Encoder = Write;
-pub type Decoder = Read;
+pub struct Encoder<'a> {
+    buf: &'a mut [u8],
+    pos: usize,
+}
 
-type CautEndian = LittleEndian;
+impl<'a> Encoder<'a> {
+    pub fn new(buf: &'a mut [u8]) -> Self {
+        Self { buf, pos: 0 }
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        &mut self.buf[self.pos..]
+    }
+
+    pub fn consume(self) -> usize {
+        self.pos
+    }
+}
+
+pub struct Decoder<'a> {
+    buf: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> Decoder<'a> {
+    pub fn new(buf: &'a [u8]) -> Self {
+        Self { buf, pos: 0 }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        &self.buf[self.pos..]
+    }
+
+    pub fn consume(self) -> usize {
+        self.pos
+    }
+}
 
 pub trait Cauterize: 'static + Sized {
     const FINGERPRINT: [u8; 20];
@@ -27,61 +57,97 @@ pub trait Primitive: 'static + Sized {
 // ****************
 
 macro_rules! impl_primitive {
-    ($T:ty, $FR:ident, $FW:ident) => {
+    ($T:ty, $READ_FN:path, $WRITE_FN:path) => {
         impl Primitive for $T {
-            fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
-                match enc.$FW::<CautEndian>(*self) {
-                    Result::Ok(()) => Result::Ok(()),
-                    _ => Result::Err(Error::Encode),
+            fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+                let ty_sz = ::std::mem::size_of::<Self>();
+                {
+                    let buf = ctx.as_mut_slice();
+                    if ty_sz > buf.len() {
+                        return Err(Error::Encode);
+                    }
+                    $WRITE_FN(buf, *self);
                 }
+                ctx.pos += ty_sz;
+                Ok(())
             }
             fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-                match ctx.$FR::<CautEndian>() {
-                    Result::Ok(val) => Result::Ok(val),
-                    Result::Err(_) => Result::Err(Error::Decode),
-                }
+                let ty_sz = ::std::mem::size_of::<Self>();
+                let val = {
+                    let buf = ctx.as_slice();
+                    if ty_sz > buf.len() {
+                        return Err(Error::Encode);
+                    }
+                    $READ_FN(buf)
+                };
+                ctx.pos += ty_sz;
+                Ok(val)
             }
         }
     };
 }
 
-impl_primitive!(u16, read_u16, write_u16);
-impl_primitive!(i16, read_i16, write_i16);
-impl_primitive!(u32, read_u32, write_u32);
-impl_primitive!(i32, read_i32, write_i32);
-impl_primitive!(u64, read_u64, write_u64);
-impl_primitive!(i64, read_i64, write_i64);
-impl_primitive!(f32, read_f32, write_f32);
-impl_primitive!(f64, read_f64, write_f64);
+impl_primitive!(u16, LittleEndian::read_u16, LittleEndian::write_u16);
+impl_primitive!(i16, LittleEndian::read_i16, LittleEndian::write_i16);
+impl_primitive!(u32, LittleEndian::read_u32, LittleEndian::write_u32);
+impl_primitive!(i32, LittleEndian::read_i32, LittleEndian::write_i32);
+impl_primitive!(u64, LittleEndian::read_u64, LittleEndian::write_u64);
+impl_primitive!(i64, LittleEndian::read_i64, LittleEndian::write_i64);
+impl_primitive!(f32, LittleEndian::read_f32, LittleEndian::write_f32);
+impl_primitive!(f64, LittleEndian::read_f64, LittleEndian::write_f64);
 
 // We can't use `impl_primitive!` for u8/i8 since it read/write for u8/i8 does not take paramters
 impl Primitive for u8 {
-    fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
-        match enc.write_u8(*self) {
-            Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(Error::Encode),
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        let ty_sz = ::std::mem::size_of::<Self>();
+        {
+            let buf = ctx.as_mut_slice();
+            if ty_sz > buf.len() {
+                return Err(Error::Encode);
+            }
+            buf[0] = *self;
         }
+        ctx.pos += ty_sz;
+        Ok(())
     }
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.read_u8() {
-            Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(Error::Decode),
-        }
+        let ty_sz = ::std::mem::size_of::<Self>();
+        let val = {
+            let buf = ctx.as_slice();
+            if ty_sz > buf.len() {
+                return Err(Error::Encode);
+            }
+            buf[0]
+        };
+        ctx.pos += ty_sz;
+        Ok(val)
     }
 }
 
 impl Primitive for i8 {
-    fn encode(&self, enc: &mut Encoder) -> Result<(), Error> {
-        match enc.write_i8(*self) {
-            Result::Ok(()) => Result::Ok(()),
-            _ => Result::Err(Error::Encode),
+    fn encode(&self, ctx: &mut Encoder) -> Result<(), Error> {
+        let ty_sz = ::std::mem::size_of::<Self>();
+        {
+            let buf = ctx.as_mut_slice();
+            if ty_sz > buf.len() {
+                return Err(Error::Encode);
+            }
+            buf[0] = *self as u8;
         }
+        ctx.pos += ty_sz;
+        Ok(())
     }
     fn decode(ctx: &mut Decoder) -> Result<Self, Error> {
-        match ctx.read_i8() {
-            Result::Ok(val) => Result::Ok(val),
-            Result::Err(_) => Result::Err(Error::Decode),
-        }
+        let ty_sz = ::std::mem::size_of::<Self>();
+        let val = {
+            let buf = ctx.as_slice();
+            if ty_sz > buf.len() {
+                return Err(Error::Encode);
+            }
+            buf[0] as i8
+        };
+        ctx.pos += ty_sz;
+        Ok(val)
     }
 }
 

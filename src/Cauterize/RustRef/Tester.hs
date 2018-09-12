@@ -28,12 +28,18 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
-           let a = $typeName$::decode(&mut dctx)?;
-           a.encode(&mut ectx)?;
-           let ebuf = ectx.into_inner();
+           let mut ebuf = vec![0u8; message.payload.len()];
+           let written = {
+               let mut dctx = cauterize::Decoder::new(&message.payload);
+               let mut ectx = cauterize::Encoder::new(&mut ebuf);
+               let a = $typeName$::decode(&mut dctx)?;
+               a.encode(&mut ectx)?;
+               ectx.consume()
+           };
+           ebuf.truncate(written);
            let message = Message {
                header: Header {
-                   len: ebuf.len(),
+                   len: written,
                    fingerprint: [$pattern$],
                },
                payload: ebuf,
@@ -45,12 +51,11 @@ genMatchArm (typeName, pattern) =
 genTester :: S.Specification -> T.Text
 genTester S.Specification {..} = [str|
   ##![allow(unused_imports)]
-  use std::io;
   use std::io::{Read, Write};
   extern crate $specName$;
   ##[allow(unused_imports)]
   use $specName$::*;
-  use $specName$::cauterize::Cauterize;
+  use $specName$::cauterize::{Cauterize, Decoder, Encoder};
   extern crate byteorder;
   use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -58,13 +63,13 @@ genTester S.Specification {..} = [str|
 
   ##[derive(Debug)]
   enum TestError {
-      Io(io::Error),
+      Io(::std::io::Error),
       Cauterize(cauterize::Error),
       Fingerprint,
   }
 
-  impl From<io::Error> for TestError {
-       fn from(err: io::Error) -> TestError {
+  impl From<::std::io::Error> for TestError {
+       fn from(err: ::std::io::Error) -> TestError {
           TestError::Io(err)
       }
   }
@@ -127,11 +132,6 @@ genTester S.Specification {..} = [str|
   }
 
   fn decode_then_encode(message: &Message) -> Result<Message, TestError> {
-      let mut dctx = ::std::io::Cursor::new(message.payload.clone());
-
-      let ebuf = Vec::new();
-      let mut ectx = ::std::io::Cursor::new(ebuf);
-
       match message.header.fingerprint {
           #t in typeList:$    genMatchArm t$#
           _ => Err(TestError::Fingerprint),
@@ -139,17 +139,17 @@ genTester S.Specification {..} = [str|
   }
 
   fn tester() {
-      let decoded_message = Message::read(&mut io::stdin()).unwrap();
-      let encoded_message = decode_then_encode(&decoded_message).unwrap();
-      encoded_message.write(&mut io::stdout()).unwrap();
+      let decoded_message = Message::read(&mut ::std::io::stdin()).expect("Failed to read message from stdin.");
+      let encoded_message = decode_then_encode(&decoded_message).expect("Failed to dec/enc message.");
+      encoded_message.write(&mut ::std::io::stdout()).expect("Failed to write encoded message to stdout.");
   }
 
   fn main() {
       let t = ::std::thread::Builder::new()
           .stack_size(1024 * 1024 * 16)
           .spawn(tester)
-          .unwrap();
-      t.join().unwrap();
+          .expect("Failed to create a new thread.");
+      t.join().expect("Failed to joing tester thread.");
   }
   |]
   where

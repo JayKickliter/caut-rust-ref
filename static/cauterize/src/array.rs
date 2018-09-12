@@ -78,6 +78,7 @@ mod tests {
         }
 
         // Test Debug
+        #[cfg(feature = "std")]
         println!("{:?}", test_array);
 
         // Test clone and Eq

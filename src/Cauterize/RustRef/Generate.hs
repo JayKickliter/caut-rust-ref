@@ -162,7 +162,7 @@ genManifest spec =
   T.pack . renderDoc
   $ vcat [ s "[package]"
          , s "name =" <+> dquotes specName
-         , s "version = \"0.1.0\"" -- TODO: the following does not work due to cargo's semver requirements: dquotes specVersion
+         , s "version = \"0.2.0\"" -- TODO: the following does not work due to cargo's semver requirements: dquotes specVersion
          , s "authors = [\"author\"]"
          , empty
          , s "[lib]"
@@ -171,15 +171,24 @@ genManifest spec =
          , s "# See https://github.com/rust-lang/rust/issues/21246"
          , s "doctest = false"
          , empty
+         , s "[features]"
+         , s "default = [\"std\"]"
+         , s "std = [\"byteorder\"]"
+         , empty
+         , s "[dependencies]"
+         , s "byteorder = { version = \"1\", optional = true }"
+         , empty
          , s "[[bin]]"
+         , s "required-features = [\"std\"]"
          , s "name = \"tester\""
          , s "path = \"bin/tester.rs\""
          , empty
-         , s "[dependencies]"
-         , s "byteorder = \"0.5\""
+         , s "[target.'cfg(feature = \"std\")'.dependencies]"
+         , s "cauterize = { path = \"cauterize\" }"
          , empty
-         , s "[dependencies.cauterize]"
-         , s "path = \"cauterize\""
+         , s "[target.'cfg(not(feature = \"std\"))'.dependencies]"
+         , s "cauterize = { path = \"cauterize\", default-features = false }"
+         , empty
          ]
   where
     specName = t $ S.specName spec
@@ -195,8 +204,10 @@ genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
-  [ s "#![allow(dead_code,unused_variables,unused_imports)]"
+  [ s "#![allow(dead_code, unused_variables, unused_imports)]"
+  , s "#![no_std]"
   , empty
+  , s "extern crate core as std;"
   , s "#[macro_use]"
   , s "pub extern crate cauterize;"
   , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range, Vector};"
@@ -373,7 +384,7 @@ genEncodeInner S.Type {typeDesc = S.Range {..}, ..} =
 
 genEncodeInner S.Type {typeDesc = S.Array {}} =
   vcat [ s "let ref elems = self.0;"
-       , genFor (s "elem in elems.iter()") (s "try!(elem.encode(ctx));")
+       , genFor (s "elem in elems.iter()") (s "elem.encode(ctx)?;")
        , genOk genUnit
        ]
 
@@ -391,7 +402,7 @@ genEncodeInner S.Type {typeDesc = S.Vector {..}} = vcat
 
 genEncodeInner S.Type {typeDesc = S.Enumeration {..}} =
   vcat [ s "let tag: &" <> tagType <+> s "= unsafe { mem::transmute(self) };"
-       , s "try!(tag.encode(ctx));"
+       , s "tag.encode(ctx)?;"
        , genOk genUnit
        ]
   where
