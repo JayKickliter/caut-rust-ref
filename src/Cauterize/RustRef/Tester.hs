@@ -146,7 +146,7 @@ genTester S.Specification {..} = [str|
 
   fn main() {
       let t = ::std::thread::Builder::new()
-          .stack_size(1024 * 1024 * 16)
+          .stack_size(1024 * 1024 * 32)
           .spawn(tester)
           .expect("Failed to create a new thread.");
       t.join().expect("Failed to joing tester thread.");
