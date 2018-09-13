@@ -140,17 +140,17 @@ genTester S.Specification {..} = [str|
   }
 
   fn tester() {
-      let decoded_message = Message::read(&mut io::stdin()).unwrap();
-      let encoded_message = decode_then_encode(&decoded_message).unwrap();
-      encoded_message.write(&mut io::stdout()).unwrap();
+      let decoded_message = Message::read(&mut io::stdin()).expect("Failed to read message from stdin.");
+      let encoded_message = decode_then_encode(&decoded_message).expect("Failed to dec/enc message.");
+      encoded_message.write(&mut io::stdout()).expect("Failed to write encoded message to stdout.");
   }
 
   fn main() {
       let t = ::std::thread::Builder::new()
           .stack_size(1024 * 1024 * 16)
           .spawn(tester)
-          .unwrap();
-      t.join().unwrap();
+          .expect("Failed to create a new thread.");
+      t.join().expect("Failed to joing tester thread.");
   }
   |]
   where
