@@ -171,16 +171,24 @@ genManifest spec =
          , s "# See https://github.com/rust-lang/rust/issues/21246"
          , s "doctest = false"
          , empty
+         , s "[features]"
+         , s "default = [\"std\"]"
+         , s "std = [\"byteorder\"]"
+         , empty
+         , s "[dependencies]"
+         , s "byteorder = { version = \"1\", optional = true }"
+         , empty
          , s "[[bin]]"
          , s "required-features = [\"std\"]"
          , s "name = \"tester\""
          , s "path = \"bin/tester.rs\""
          , empty
-         , s "[dependencies]"
-         , s "byteorder = { version = \"1.2.6\" }"
+         , s "[target.'cfg(feature = \"std\")'.dependencies]"
+         , s "cauterize = { path = \"cauterize\" }"
          , empty
-         , s "[dependencies.cauterize]"
-         , s "path = \"cauterize\""
+         , s "[target.'cfg(not(feature = \"std\"))'.dependencies]"
+         , s "cauterize = { path = \"cauterize\", default-features = false }"
+         , empty
          ]
   where
     specName = t $ S.specName spec
@@ -196,8 +204,10 @@ genRust = T.pack . genSource
 
 genSource :: S.Specification -> String
 genSource S.Specification {..} = renderDoc $ vcat $ punctuate empty
-  [ s "#![allow(dead_code,unused_variables,unused_imports)]"
+  [ s "#![allow(dead_code, unused_variables, unused_imports)]"
+  , s "#![no_std]"
   , empty
+  , s "extern crate core as std;"
   , s "#[macro_use]"
   , s "pub extern crate cauterize;"
   , s "use self::cauterize::{Primitive, Error, Encoder, Decoder, Cauterize, Range, Vector};"
