@@ -162,7 +162,7 @@ genManifest spec =
   T.pack . renderDoc
   $ vcat [ s "[package]"
          , s "name =" <+> dquotes specName
-         , s "version = \"0.1.0\"" -- TODO: the following does not work due to cargo's semver requirements: dquotes specVersion
+         , s "version = \"0.2.0\"" -- TODO: the following does not work due to cargo's semver requirements: dquotes specVersion
          , s "authors = [\"author\"]"
          , empty
          , s "[lib]"
@@ -176,7 +176,7 @@ genManifest spec =
          , s "path = \"bin/tester.rs\""
          , empty
          , s "[dependencies]"
-         , s "byteorder = \"0.5\""
+         , s "byteorder = { version = \"1.2.6\" }"
          , empty
          , s "[dependencies.cauterize]"
          , s "path = \"cauterize\""
