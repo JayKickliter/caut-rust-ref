@@ -51,7 +51,6 @@ genMatchArm (typeName, pattern) =
 genTester :: S.Specification -> T.Text
 genTester S.Specification {..} = [str|
   ##![allow(unused_imports)]
-  use std::io;
   use std::io::{Read, Write};
   extern crate $specName$;
   ##[allow(unused_imports)]
@@ -64,13 +63,13 @@ genTester S.Specification {..} = [str|
 
   ##[derive(Debug)]
   enum TestError {
-      Io(io::Error),
+      Io(::std::io::Error),
       Cauterize(cauterize::Error),
       Fingerprint,
   }
 
-  impl From<io::Error> for TestError {
-       fn from(err: io::Error) -> TestError {
+  impl From<::std::io::Error> for TestError {
+       fn from(err: ::std::io::Error) -> TestError {
           TestError::Io(err)
       }
   }
@@ -140,9 +139,9 @@ genTester S.Specification {..} = [str|
   }
 
   fn tester() {
-      let decoded_message = Message::read(&mut io::stdin()).expect("Failed to read message from stdin.");
+      let decoded_message = Message::read(&mut ::std::io::stdin()).expect("Failed to read message from stdin.");
       let encoded_message = decode_then_encode(&decoded_message).expect("Failed to dec/enc message.");
-      encoded_message.write(&mut io::stdout()).expect("Failed to write encoded message to stdout.");
+      encoded_message.write(&mut ::std::io::stdout()).expect("Failed to write encoded message to stdout.");
   }
 
   fn main() {
