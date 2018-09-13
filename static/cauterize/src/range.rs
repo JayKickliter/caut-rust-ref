@@ -65,6 +65,7 @@ mod test {
         assert_eq!(test_range.set(254), None);
         assert_eq!(test_range.set(256), Some(256));
         assert_eq!(Rangeu8::new(100), Ok(Rangeu8(100)));
+        #[cfg(feature = "std")]
         println!("{:?}", test_range);
     }
 }

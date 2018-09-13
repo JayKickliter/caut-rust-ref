@@ -3,11 +3,12 @@ name = "cauterize"
 version = "0.1.0"
 authors = ["Jay Kickliter"]
 
-[lib]
-name = "cauterize"
+[features]
+default = ["std"]
+std = []
 
 [dependencies]
-byteorder = "0.5"
+byteorder = {version = "0.5"}
 
 [dev-dependencies]
 quickcheck = "*"

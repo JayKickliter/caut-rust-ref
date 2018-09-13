@@ -28,12 +28,18 @@ makeTypeList fpLen ts = zip typeNames fingerPrints
 genMatchArm :: (T.Text,T.Text) -> T.Text
 genMatchArm (typeName, pattern) =
   [str|[$pattern$] => {
-           let a = $typeName$::decode(&mut dctx)?;
-           a.encode(&mut ectx)?;
-           let ebuf = ectx.into_inner();
+           let mut ebuf = vec![0u8; message.payload.len()];
+           let written = {
+               let mut dctx = cauterize::Decoder::new(&message.payload);
+               let mut ectx = cauterize::Encoder::new(&mut ebuf);
+               let a = $typeName$::decode(&mut dctx)?;
+               a.encode(&mut ectx)?;
+               ectx.consume()
+           };
+           ebuf.truncate(written);
            let message = Message {
                header: Header {
-                   len: ebuf.len(),
+                   len: written,
                    fingerprint: [$pattern$],
                },
                payload: ebuf,
@@ -50,7 +56,7 @@ genTester S.Specification {..} = [str|
   extern crate $specName$;
   ##[allow(unused_imports)]
   use $specName$::*;
-  use $specName$::cauterize::Cauterize;
+  use $specName$::cauterize::{Cauterize, Decoder, Encoder};
   extern crate byteorder;
   use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -127,11 +133,6 @@ genTester S.Specification {..} = [str|
   }
 
   fn decode_then_encode(message: &Message) -> Result<Message, TestError> {
-      let mut dctx = ::std::io::Cursor::new(message.payload.clone());
-
-      let ebuf = Vec::new();
-      let mut ectx = ::std::io::Cursor::new(ebuf);
-
       match message.header.fingerprint {
           #t in typeList:$    genMatchArm t$#
           _ => Err(TestError::Fingerprint),

@@ -170,6 +170,7 @@ mod tests {
         for i in 0..test_vector.capacity() {
             test_vector.push(i as u8);
         }
+        #[cfg(feature = "std")]
         println!("{:?}", test_vector);
 
         assert_eq!(test_vector, test_vector.clone());
