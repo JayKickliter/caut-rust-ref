@@ -329,7 +329,7 @@ genComboStructField (S.EmptyField n i) =
     idx = s . show $ i
 
 genEnumerationEnumField :: S.EnumVal -> Doc
-genEnumerationEnumField (S.EnumVal n i) = nm <> comma <+> genComment idx
+genEnumerationEnumField (S.EnumVal n i) = nm <> space <> equals <>  space <> idx <> comma
   where
     nm  = s . T.unpack . titleCase . C.unIdentifier $ n
     idx = s . show $ i
@@ -401,7 +401,7 @@ genEncodeInner S.Type {typeDesc = S.Vector {..}} = vcat
     maxLen = s . show $ vectorLength
 
 genEncodeInner S.Type {typeDesc = S.Enumeration {..}} =
-  vcat [ s "let tag: &" <> tagType <+> s "= unsafe { mem::transmute(self) };"
+  vcat [ s "let tag " <+> s "= self.clone() as " <> tagType <> semi
        , s "tag.encode(ctx)?;"
        , genOk genUnit
        ]
@@ -528,7 +528,7 @@ genDecodeInner S.Type {typeDesc = S.Enumeration {..}, ..} =
        ]
   where
     tagType = genTagTypeName enumerationTag
-    maxTag  = s . show $ ((length enumerationValues) - 1)
+    maxTag  = s . show $ (S.enumValIndex (last enumerationValues))
 
 genDecodeInner S.Type {typeDesc = S.Record {..}, ..} =
   vcat [ s "let rec =" <+> genTypeName typeName
