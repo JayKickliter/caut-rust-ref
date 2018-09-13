@@ -1,7 +1,5 @@
 #!/bin/sh
 
-rm -rf crucible-*
-
 stack exec crucible -- tester                                                                \
   --build-cmd="stack exec caut-rust-ref -- --spec=%s --output=rust"                          \
   --build-cmd="cargo build --manifest-path rust/Cargo.toml"                                  \
