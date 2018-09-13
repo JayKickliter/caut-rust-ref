@@ -522,13 +522,13 @@ genDecodeInner S.Type {typeDesc = S.Vector {..}, ..} =
 
 genDecodeInner S.Type {typeDesc = S.Enumeration {..}, ..} =
   vcat [ s "let tag =" <+> genTryDecode tagType <> semi
-       , genIf (s "tag >" <+> maxTag)
-         (s "return Err(Error::InvalidTag);")
-       , s "Ok(unsafe { mem::transmute(tag) })"
+       , genOk $ genMatch (s "tag") matchArms
        ]
   where
+    name = genTypeName typeName
     tagType = genTagTypeName enumerationTag
-    maxTag  = s . show $ (S.enumValIndex (last enumerationValues))
+    matchArms = map genDecodeEnumMatchArm enumerationValues ++ [(s "_", s "return Err(Error::InvalidTag),")]
+    genDecodeEnumMatchArm S.EnumVal{..} = (s . show $ enumValIndex, name <::> genFieldName enumValName <> comma)
 
 genDecodeInner S.Type {typeDesc = S.Record {..}, ..} =
   vcat [ s "let rec =" <+> genTypeName typeName
@@ -571,20 +571,17 @@ genDecodeInner S.Type {typeDesc = S.Combination {..}, ..} =
 
 genDecodeInner S.Type {typeDesc = S.Union {..}, ..} =
   vcat [ s "let tag =" <+> genTryDecode tagType <> semi
-       , genMatch (s "tag") matchArms
+       , genOk $ genMatch (s "tag") matchArms
        ]
   where
     name = genTypeName typeName
     tagType = genTagTypeName unionTag
     matchArms = map genDecodeEnumMatchArm unionFields
-                ++ [(s "_", s "Err(Error::InvalidTag),")]
+                ++ [(s "_", s "return Err(Error::InvalidTag),")]
     genDecodeEnumMatchArm :: S.Field -> (Doc,Doc)
     genDecodeEnumMatchArm field = case field of
-      S.EmptyField {..} -> (idx , genOk (name <::> variantName) <> comma)
-      S.DataField {..}  -> (idx , genOk (name <::> variantName <> parens
-                                          (genTryDecode variantType)
-                                        ) <> comma
-                           )
+      S.EmptyField {..} -> (idx , name <::> variantName <> comma)
+      S.DataField {..}  -> (idx , name <::> variantName <> parens (genTryDecode variantType) <> comma)
       where
         variantType = genTypeName (S.fieldRef field)
         variantName = genFieldName (S.fieldName field)
