@@ -13,8 +13,8 @@ module Cauterize.RustRef.Util
 
 import qualified Cauterize.CommonTypes as C
 import qualified Data.Text             as T
-import           Data.Word               (Word8)
-import           Numeric                 (showHex)
+import           Data.Word             (Word8)
+import           Numeric               (showHex)
 
 cautIdToRustPrim :: C.Identifier -> T.Text
 cautIdToRustPrim i = case C.unIdentifier i of

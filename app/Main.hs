@@ -5,8 +5,8 @@ module Main where
 
 import           Cauterize.RustRef.Generate
 import           Cauterize.RustRef.Options
-import           Cauterize.RustRef.Tester
 import           Cauterize.RustRef.Static
+import           Cauterize.RustRef.Tester
 import qualified Data.ByteString            as B
 import           Data.Text
 import           Data.Text.IO               (writeFile)

@@ -8,7 +8,7 @@ import Options.Applicative
 runWithOptions :: (RustOpts -> IO ()) -> IO ()
 runWithOptions fn = execParser options >>= fn
 
-data RustOpts = RustOpts { specFile :: FilePath
+data RustOpts = RustOpts { specFile        :: FilePath
                          , outputDirectory :: FilePath
                          } deriving (Show)
 
