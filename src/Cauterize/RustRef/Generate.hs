@@ -70,7 +70,7 @@ genUnit = s "()"
 genMatch :: Doc -> [(Doc,Doc)] -> Doc
 genMatch a bs = s "match" <+> a <+> genBlock exprs
   where
-    matchArm (l,r) = fill 2 l <+> s "=>" <+> r
+    matchArm (l,r) = fill 2 l <+> s "=>" <+> r <> comma
     exprs = vcat (map matchArm bs)
 
 genAmp :: Doc
@@ -434,8 +434,8 @@ genEncodeInner S.Type{typeDesc = S.Combination {..}, ..} =
 
     encField field = case field of
       S.DataField {..} -> genMatch (s "self." <> fName)
-                          [ (genSome (s "ref a"), genTryEncode (s "a") <> comma)
-                          , (s "None", s "()"  <> comma)
+                          [ (genSome (s "ref a"), genTryEncode (s "a"))
+                          , (s "None", s "()")
                           ]
       _ -> genComment (s "No data for field" <+> fName)
       where
@@ -527,8 +527,8 @@ genDecodeInner S.Type {typeDesc = S.Enumeration {..}, ..} =
   where
     name = genTypeName typeName
     tagType = genTagTypeName enumerationTag
-    matchArms = map genDecodeEnumMatchArm enumerationValues ++ [(s "_", s "return Err(Error::InvalidTag),")]
-    genDecodeEnumMatchArm S.EnumVal{..} = (s . show $ enumValIndex, name <::> genFieldName enumValName <> comma)
+    matchArms = map genDecodeEnumMatchArm enumerationValues ++ [(s "_", s "return Err(Error::InvalidTag)")]
+    genDecodeEnumMatchArm S.EnumVal{..} = (s . show $ enumValIndex, name <::> genFieldName enumValName)
 
 genDecodeInner S.Type {typeDesc = S.Record {..}, ..} =
   vcat [ s "let rec =" <+> genTypeName typeName
@@ -555,15 +555,15 @@ genDecodeInner S.Type {typeDesc = S.Combination {..}, ..} =
       S.EmptyField {..} ->
         fName <> colon
         <+> genMatch (s "tag &" <+> parens(s "1 <<" <+> fIdx) <+> s "== 0")
-                     [ (s "true",  s "None"  <> comma)
-                     , (s "false", genSome genUnit <> comma)
+                     [ (s "true",  s "None")
+                     , (s "false", genSome genUnit)
                      ] <> comma
 
       S.DataField {..} ->
         fName <> colon
         <+> genMatch (s "tag &" <+> parens(s "1 <<" <+> fIdx) <+> s "== 0")
-                     [ (s "true",  s "None"  <> comma)
-                     , (s "false", genSome (genTry $ genTypeName fieldRef <::> s "decode(ctx)") <> comma)
+                     [ (s "true",  s "None")
+                     , (s "false", genSome (genTry $ genTypeName fieldRef <::> s "decode(ctx)"))
                      ] <> comma
       where
         fIdx  = s . show $ S.fieldIndex field
@@ -577,11 +577,11 @@ genDecodeInner S.Type {typeDesc = S.Union {..}, ..} =
     name = genTypeName typeName
     tagType = genTagTypeName unionTag
     matchArms = map genDecodeEnumMatchArm unionFields
-                ++ [(s "_", s "return Err(Error::InvalidTag),")]
+                ++ [(s "_", s "return Err(Error::InvalidTag)")]
     genDecodeEnumMatchArm :: S.Field -> (Doc,Doc)
     genDecodeEnumMatchArm field = case field of
-      S.EmptyField {..} -> (idx , name <::> variantName <> comma)
-      S.DataField {..}  -> (idx , name <::> variantName <> parens (genTryDecode variantType) <> comma)
+      S.EmptyField {..} -> (idx , name <::> variantName)
+      S.DataField {..}  -> (idx , name <::> variantName <> parens (genTryDecode variantType))
       where
         variantType = genTypeName (S.fieldRef field)
         variantName = genFieldName (S.fieldName field)
