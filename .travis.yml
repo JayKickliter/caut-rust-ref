@@ -7,19 +7,28 @@ cache:
   directories:
   - $HOME/.stack
 
-# Just use `c` since we're going to download Haskell and Rust compilers via stack and rustup
-language: c
+language: rust
 
-# Since this container cand't sudo, we need to specify additional packages to install
+rust:
+  - stable
+  - beta
+  - nightly
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+# Since this container can't sudo, we need to specify additional packages to install
 addons:
   apt:
     sources:
-    - hvr-ghc
+      - hvr-ghc
     packages:
-    # haskell compiler
-    - ghc-7.10.2
-    # needed by some haskell package
-    - libgmp3-dev
+      # haskell compiler
+      - ghc-7.10.2
+      # needed by some haskell package
+      - libgmp3-dev
 
 before_install:
   - export PATH=/opt/ghc/7.10.2/bin:$PATH
@@ -28,9 +37,7 @@ before_install:
   - mkdir -p ~/.cargo/bin
   - export PATH=$HOME/.cargo/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-  - curl https://sh.rustup.rs -sSf | sh -s -- -y
   - stack setup
-  - rustup override set nightly
 
 script:
   - stack --skip-ghc-check install caut-rust-ref
