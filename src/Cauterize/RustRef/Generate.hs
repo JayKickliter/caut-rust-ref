@@ -172,6 +172,7 @@ genManifest spec =
          , s "doctest = false"
          , empty
          , s "[[bin]]"
+         , s "required-features = [\"std\"]"
          , s "name = \"tester\""
          , s "path = \"bin/tester.rs\""
          , empty
